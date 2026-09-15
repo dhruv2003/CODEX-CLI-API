@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Codex CLI API",
+  "version": "0.1.1",
+  "identifier": "com.codexcliapi.desktop",
+  "build": { "frontendDist": "../desktop", "beforeDevCommand": "npm run desktop:prepare", "beforeBuildCommand": "npm run desktop:prepare" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [{ "label": "main", "title": "Codex CLI API", "width": 1280, "height": 900, "minWidth": 760, "minHeight": 600 }],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; frame-src http://127.0.0.1:*; object-src 'none'; base-uri 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "publisher": "Dhruv",
+    "copyright": "Created by Dhruv · https://thisisdhruv.in",
+    "homepage": "https://thisisdhruv.in",
+    "targets": "all",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "resources": { "../desktop-runtime/": "runtime/" },
+    "macOS": { "minimumSystemVersion": "11.0" }
+  }
+}

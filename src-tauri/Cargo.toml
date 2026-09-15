@@ -1,0 +1,32 @@
+[package]
+name = "codex-cli-api-desktop"
+version = "0.1.1"
+description = "Local Codex API desktop gateway"
+authors = ["Dhruv"]
+homepage = "https://thisisdhruv.in"
+edition = "2021"
+rust-version = "1.77.2"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.8"
+rfd = "0.15"
+tauri-plugin-single-instance = "2"
+open = "5"
+dunce = "1"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.dev]
+debug = 0
+incremental = false
+
+[profile.test]
+debug = 0
+incremental = false

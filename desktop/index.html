@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Codex CLI API</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="branding.css"></head>
+<body>
+  <header><div class="brand"><img class="app-logo" src="logo.png" alt="Codex CLI API logo"><div><h1>Codex CLI API</h1><p>Your local AI gateway · Created by Dhruv</p></div></div><div class="controls"><span id="status" role="status">Starting…</span><button id="settings-toggle" hidden>Settings</button><button id="restart" hidden>Restart</button><button id="stop" hidden>Stop gateway</button></div></header>
+  <main id="onboarding">
+    <section class="intro"><span class="eyebrow">WELCOME HOME</span><h2>One app. Your own workspace.</h2><p>Choose the folder your API keys can access. Then create a key and sign in with your own Codex account in the dashboard.</p><p class="muted">The runtime is included. No Node.js installation, terminal commands, or .env file needed.</p></section>
+    <form id="settings-form"><label for="workspace">Workspace folder</label><div class="folder"><input id="workspace" required placeholder="Choose your projects folder" autocomplete="off"><button id="choose" type="button">Choose folder</button></div><p class="hint">Select an existing folder. Each API key can be restricted to a project inside it. Keep credentials and application data outside this folder.</p><details><summary>Advanced settings</summary><label for="port">Local API port</label><input id="port" type="number" min="1024" max="65535" value="3081" required><p class="hint">Local connections only (127.0.0.1). If you change this port, update the endpoint in VS Code.</p><p class="hint">Application data: <span id="data-dir">Loading…</span></p></details><button class="primary" id="start" type="submit">Save & start gateway</button><p class="hint" id="restart-hint" hidden>Saving these settings restarts the gateway. Active requests will be interrupted.</p></form>
+  </main>
+  <p id="error" role="alert" hidden></p>
+  <iframe id="dashboard" title="API key manager and setup" hidden referrerpolicy="no-referrer"></iframe>
+  <footer class="creator">Designed & developed by <strong>Dhruv</strong> · <button id="creator-site" type="button">thisisdhruv.in</button></footer>
+  <script src="app.js"></script>
+</body>
+</html>

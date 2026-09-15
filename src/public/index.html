@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark light">
+    <title>Codex CLI API — Admin</title>
+    <link rel="stylesheet" href="/admin/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand-logo" src="/admin/logo.png" alt="Codex CLI API logo">
+          <div>
+            <h1>API Key Manager</h1>
+            <p class="brand-subtitle">Local OpenAI-compatible API Gateway</p>
+          </div>
+        </div>
+        <p id="status" class="status" role="status">Loading keys…</p>
+      </header>
+      <p id="migration-notice" class="setup-note" role="status" hidden></p>
+
+      <section class="overview" aria-label="Service overview" aria-live="polite" aria-busy="true">
+        <article class="overview-card">
+          <span class="metric-label">API keys</span>
+          <div class="metric-value"><strong id="metric-active-keys">—</strong><span>active</span></div>
+          <p><span id="metric-total-keys">—</span> issued in total</p>
+        </article>
+        <article class="overview-card">
+          <span class="metric-label">Requests</span>
+          <div class="metric-value"><strong id="metric-requests">—</strong></div>
+          <p>Processed across every key</p>
+        </article>
+        <article class="overview-card">
+          <span class="metric-label">Tokens processed</span>
+          <div class="metric-value"><strong id="metric-tokens">—</strong></div>
+          <p>Input and output combined</p>
+        </article>
+        <article class="overview-card">
+          <span class="metric-label">Concurrent work</span>
+          <div class="metric-value"><strong id="metric-capacity-active">—</strong><span>running</span></div>
+          <p><span id="metric-capacity-queued">—</span> waiting in queue</p>
+        </article>
+      </section>
+
+      <section class="panel create-panel" aria-labelledby="create-title">
+        <div class="panel-intro">
+          <p class="eyebrow">NEW CREDENTIAL</p>
+          <h2 id="create-title">Create an API key</h2>
+          <p class="muted">The secret is shown once. Save it before closing this page.</p>
+        </div>
+        <form id="create-form" class="create-form">
+          <div class="form-field">
+            <label for="key-name">Key name</label>
+            <input id="key-name" name="name" maxlength="100" autocomplete="off" placeholder="e.g. local development" required>
+          </div>
+          <div class="form-field workspace-field">
+            <label for="key-workspace-root">Workspace folder</label>
+            <input id="key-workspace-root" name="workspaceRoot" maxlength="4096" autocomplete="off" placeholder="Your project folder" aria-describedby="workspace-help workspace-error" required>
+            <p id="workspace-help" class="muted">Loading the allowed workspace…</p>
+            <p id="workspace-error" class="error-state" role="alert" hidden></p>
+          </div>
+          <div class="form-field compact-field">
+            <label for="key-rpm">Requests / minute</label>
+            <input id="key-rpm" name="requestsPerMinute" type="number" min="1" step="1" value="60" required>
+          </div>
+          <div class="form-field">
+            <label for="key-expiry">Expiry <span class="muted">(optional)</span></label>
+            <input id="key-expiry" name="expiresAt" type="datetime-local">
+          </div>
+          <button type="submit">Create key</button>
+        </form>
+      </section>
+
+      <section id="secret-panel" class="panel secret-panel" hidden aria-labelledby="secret-title">
+        <div class="panel-intro">
+          <p class="eyebrow">COPY NOW</p>
+          <h2 id="secret-title">New API key</h2>
+          <p class="muted">This is the only time the full secret is available.</p>
+        </div>
+        <div class="secret-row">
+          <code id="new-secret" tabindex="0"></code>
+          <button class="secondary" type="button" data-copy="new-secret">Copy</button>
+        </div>
+      </section>
+
+      <section class="keys-section" aria-labelledby="keys-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">ACCESS</p>
+            <h2 id="keys-title">Issued keys</h2>
+          </div>
+          <button id="refresh" class="secondary" type="button">Refresh</button>
+        </div>
+        <div id="keys" class="key-list" aria-live="polite" aria-busy="true"></div>
+      </section>
+
+      <section class="panel setup" aria-labelledby="setup-title">
+        <div class="panel-intro setup-intro">
+          <div>
+            <p class="eyebrow">GET STARTED</p>
+            <h2 id="setup-title">Connect your app</h2>
+          </div>
+          <p class="muted">Create a key above, sign in to Codex once, then connect VS Code.</p>
+        </div>
+        <div class="setup-choice">
+          <label for="setup-platform">Your computer</label>
+          <select id="setup-platform" name="setupPlatform">
+            <option value="macos">macOS</option>
+            <option value="windows">Windows</option>
+          </select>
+          <p id="setup-workspace-root" class="muted"></p>
+        </div>
+        <div class="wizard-controls">
+          <div><label for="setup-key">API key</label><select id="setup-key"><option value="">Create a key first</option></select></div>
+          <div><label for="setup-model">Model</label><select id="setup-model"></select></div>
+          <div><label for="setup-reasoning">Reasoning level</label><select id="setup-reasoning"></select><p class="muted">Applies to the test request. In VS Code, choose the level from its reasoning control.</p></div>
+          <div><label for="setup-secret">Key secret for client configuration</label><input id="setup-secret" type="password" autocomplete="off" placeholder="Paste your saved API key"><p class="muted">Kept only in this page's memory. Never saved to browser storage.</p></div>
+        </div>
+        <p id="setup-progress" class="setup-note" role="status">Create a key to begin.</p>
+        <div class="setup-note"><button id="login-codex" type="button" disabled>Sign in to Codex</button> <button id="login-cancel" type="button" class="secondary" hidden>Cancel sign-in</button><p id="login-status" role="status">Sign in here, or use the terminal command below.</p><a id="login-link" target="_blank" rel="noopener noreferrer" hidden>Open Codex sign-in</a> <code id="login-code"></code> <button id="login-copy" type="button" class="copy-icon" data-copy="login-code" hidden>Copy</button></div>
+        <div class="setup-note"><button id="test-connection" type="button" disabled>Test connection</button><p id="test-result" role="status">Runs a small model request using the selected key's Codex login. Uses your account's quota.</p></div>
+        <p class="setup-note">In VS Code, open Chat → Manage Models → Add Models → Custom Endpoint. Use the configuration below. Local VS Code can connect directly; no tunnel is needed. For WSL, SSH or containers, localhost refers to that environment, so use a reachable forwarded endpoint.</p>
+        <p id="capability-limits" class="setup-note">This gateway supports text chat and streaming. Client tool calls and standard image uploads are not supported; images require the gateway's custom local-file input. Requests allow up to 100,000 characters of combined prompt text and a 1 MB JSON body. Model context and output-token limits are not reported by this gateway. Use VS Code's text chat mode; its tool-based Agent mode is not supported.</p>
+        <div class="snippets">
+          <div class="snippet">
+            <span>1. Create your key</span>
+            <div><code id="key-create-example"></code><button class="copy-icon" type="button" data-copy="key-create-example" aria-label="Copy key creation guidance">Copy</button></div>
+          </div>
+          <div class="snippet">
+            <span>2. Sign in to Codex</span>
+            <div><code id="login-example"></code><button class="copy-icon" type="button" data-copy="login-example" aria-label="Copy Codex login setup">Copy</button></div>
+          </div>
+          <div class="snippet">
+            <span>3. VS Code endpoint</span>
+            <div><code id="base-url"></code><button class="copy-icon" type="button" data-copy="base-url" aria-label="Copy base URL">Copy</button></div>
+          </div>
+          <div class="snippet">
+            <span>4. VS Code configuration</span>
+            <div><code id="vscode-example"></code><button class="copy-icon" type="button" data-copy="vscode-example" aria-label="Copy VS Code configuration">Copy</button></div>
+          </div>
+          <div class="snippet">
+            <span>5. Test the connection</span>
+            <div><code id="curl-example"></code><button class="copy-icon" type="button" data-copy="curl-example" aria-label="Copy API test">Copy</button></div>
+          </div>
+          <details class="advanced-tunnel"><summary>Advanced: HTTPS access for remote clients</summary><p class="setup-note">Only needed when a client cannot reach your local server. Use a Cloudflare named tunnel with a hostname you control. Keep the gateway listening on loopback. The rules below expose authenticated /v1/ routes and return 404 for the dashboard and admin routes.</p><div class="snippet">
+            <span>Remote-only HTTPS tunnel</span>
+            <div><code id="tunnel-example"></code><button class="copy-icon" type="button" data-copy="tunnel-example" aria-label="Copy restricted tunnel configuration">Copy</button></div>
+          </div><p class="setup-note">Install cloudflared (macOS: brew install cloudflared; Windows: winget install --id Cloudflare.cloudflared), then run cloudflared tunnel login, cloudflared tunnel create codex-api, and cloudflared tunnel route dns codex-api api.example.com. Save this configuration as ~/.cloudflared/config.yml on macOS or %USERPROFILE%\\.cloudflared\\config.yml on Windows, replacing the tunnel ID, hostname and credentials path. Validate with cloudflared tunnel ingress validate. Start with cloudflared tunnel run codex-api; stop with Ctrl+C; restart with the same command. A named hostname stays the same. If you change the hostname, replace the VS Code endpoint with https://YOUR_HOST/v1/chat/completions. Confirm /, /admin/config and /healthz return 404 publicly, and /v1/models without a key is rejected.</p></details>
+        </div>
+      </section>
+      <section class="panel history" aria-labelledby="history-title"><div class="panel-intro"><h2 id="history-title">Recent requests</h2><p class="muted">Latest 100 requests, kept in server memory until restart. Prompts, responses and secrets are not stored here.</p></div><div class="table-scroll"><table><thead><tr><th>Time</th><th>Key</th><th>Model</th><th>Result</th><th>Duration</th><th>Tokens in / out</th></tr></thead><tbody id="request-history"></tbody></table></div><p id="history-status" class="setup-note" role="status">Loading recent requests…</p></section>
+      <p class="setup-note desktop-local-note">This desktop app connects directly to VS Code on this computer using localhost. No tunnel is needed; public tunnel access is not supported in the packaged app.</p>
+      <footer class="creator-credit">Created by Dhruv · <a href="https://thisisdhruv.in" target="_blank" rel="noopener noreferrer">thisisdhruv.in</a></footer>
+    </main>
+    <dialog id="delete-dialog" aria-labelledby="delete-title" aria-describedby="delete-description">
+      <form method="dialog">
+        <h2 id="delete-title">Delete API key permanently?</h2>
+        <p id="delete-description"></p>
+        <p>This cannot be undone. Your other API keys will not be affected.</p>
+        <div class="delete-dialog-actions">
+          <button value="cancel" autofocus>Cancel</button>
+          <button class="danger" value="delete">Delete permanently</button>
+        </div>
+      </form>
+    </dialog>
+    <script type="module" src="/admin/app.js"></script>
+  </body>
+</html>
