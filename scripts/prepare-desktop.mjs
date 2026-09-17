@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { chmod, copyFile, cp, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
+import { extractRuntime } from './extract-runtime.mjs';
 
 // Build on the target OS/architecture; never copy a Homebrew/system Node binary
 // (it may depend on libraries absent on the recipient's machine).
@@ -46,8 +46,7 @@ const archive = join(cache, archiveName);
 await download(`https://nodejs.org/dist/v${nodeVersion}/${archiveName}`, archive, checksum);
 const staging = await mkdtemp(join(cache, 'stage-'));
 try {
-  // Both macOS and supported Windows versions ship tar with zip support.
-  execFileSync('tar', ['-xf', archive, '-C', staging], { stdio: 'inherit' });
+  extractRuntime(archive, staging);
   const runtime = join(staging, 'runtime');
   await mkdir(join(runtime, 'licenses'), { recursive: true });
   await copyFile(join(staging, nodeFolder, exe ? 'node.exe' : 'bin/node'), join(runtime, `node${exe}`));

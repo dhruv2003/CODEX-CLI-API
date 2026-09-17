@@ -61,7 +61,7 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test
-      - run: node --test scripts/release-policy.checks.mjs scripts/release-assets.checks.mjs
+      - run: npm run test:release
       - run: npm run desktop:prepare
       - run: npm run desktop:check
       - name: Build desktop installer and optional updater signature

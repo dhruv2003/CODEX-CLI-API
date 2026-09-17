@@ -8,7 +8,7 @@
     "start": "node --env-file-if-exists=.env --import=tsx/esm src/server.ts",
     "test": "node node_modules/vitest/vitest.mjs run test",
     "test:browser": "node node_modules/@playwright/test/cli.js test",
-    "test:release": "node --test scripts/release-policy.checks.mjs scripts/release-assets.checks.mjs",
+    "test:release": "node --test scripts/release-policy.checks.mjs scripts/release-assets.checks.mjs scripts/extract-runtime.checks.mjs",
     "check": "node --check src/public/app.js && node --check desktop/app.js && node --check scripts/prepare-desktop.mjs && node --check scripts/build-dmg.mjs && node node_modules/typescript/bin/tsc --noEmit",
     "key:create": "node --env-file-if-exists=.env --import=tsx/esm src/create-key.ts",
     "desktop:prepare": "node scripts/prepare-desktop.mjs",
