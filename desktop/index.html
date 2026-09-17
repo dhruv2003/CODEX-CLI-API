@@ -8,7 +8,7 @@
     <form id="settings-form"><label for="workspace">Workspace folder</label><div class="folder"><input id="workspace" required placeholder="Choose your projects folder" autocomplete="off"><button id="choose" type="button">Choose folder</button></div><p class="hint">Select an existing folder. Each API key can be restricted to a project inside it. Keep credentials and application data outside this folder.</p><details><summary>Advanced settings</summary><label for="port">Local API port</label><input id="port" type="number" min="1024" max="65535" value="3081" required><p class="hint">Local connections only (127.0.0.1). If you change this port, update the endpoint in VS Code.</p><p class="hint">Application data: <span id="data-dir">Loading…</span></p></details><button class="primary" id="start" type="submit">Save & start gateway</button><p class="hint" id="restart-hint" hidden>Saving these settings restarts the gateway. Active requests will be interrupted.</p></form>
   </main></div>
   <dialog id="settings-drawer" aria-labelledby="settings-title">
-  <div class="drawer-heading"><div><h2 id="settings-title">Settings</h2><p class="hint">Codex CLI API · v0.2.1</p></div><button id="close-settings" type="button" aria-label="Close settings">Close</button></div>
+  <div class="drawer-heading"><div><h2 id="settings-title">Settings</h2><p class="hint">Codex CLI API · v0.1.2</p></div><button id="close-settings" type="button" aria-label="Close settings">Close</button></div>
   <div id="settings-content"></div>
   <section id="desktop-options" class="native-panel">
     <h3>Desktop behaviour</h3>

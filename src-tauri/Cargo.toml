@@ -1,6 +1,6 @@
 [package]
 name = "codex-cli-api-desktop"
-version = "0.2.1"
+version = "0.1.2"
 description = "Local Codex API desktop gateway"
 authors = ["Dhruv"]
 homepage = "https://thisisdhruv.in"
