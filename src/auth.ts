@@ -69,7 +69,6 @@ export interface ApiKeyUsage {
 export type DeleteApiKeyResult = 'deleted' | 'active' | 'not_found'
 
 const DEFAULT_REQUESTS_PER_MINUTE = 60
-
 function hashKey(key: string): string {
   return createHash('sha256').update(key).digest('hex')
 }

@@ -10,6 +10,7 @@ let setupKey = "YOUR_KEY";
 let setupKeyId = "key_REPLACE_WITH_ID";
 let setupConfigError = "";
 let dashboardKeys = [];
+let healthData;
 let setupData = { models: [], keys: [] };
 const secrets = new Map();
 let loginTimer;
@@ -62,6 +63,7 @@ async function loadConfig() {
 }
 
 function renderSetup() {
+  renderChecklist();
   if (!adminConfig) {
     ["setup-workspace-root", "key-create-example", "base-url", "login-example", "vscode-example", "curl-example", "tunnel-example"].forEach((id) => { $(id).textContent = setupConfigError ? "Unavailable: " + setupConfigError : "Loading server configuration…"; });
     return;
@@ -92,6 +94,25 @@ function renderSetup() {
   $("setup-progress").textContent = key ? progressText(key) : "Create a key to begin.";
   $("test-connection").disabled = !key || !key.active || isExpired(key.expiresAt) || pendingTests.has(key.id);
   $("login-codex").disabled = !key || !key.active || isExpired(key.expiresAt) || pendingLoginKey === key.id;
+}
+
+function renderChecklist() {
+  const key = dashboardKeys.find(entry => entry.id === setupKeyId);
+  const setup = setupData.keys.find(entry => entry.id === setupKeyId);
+  const validKey = key && key.active && !isExpired(key.expiresAt);
+  const steps = [
+    ['Choose workspace', Boolean(adminConfig), '#create-title'],
+    ['Create an active key', Boolean(validKey), '#keys-title'],
+    ['Sign in to Codex', setup?.authStatus === 'credentials_found', '#login-codex'],
+    ['Connect VS Code', false, '#base-url'],
+    ['Test connection', Boolean(validKey && setup?.authStatus === 'credentials_found' && setup?.lastTest?.ok && setup?.lastTest?.model === $('setup-model').value), '#test-connection'],
+  ];
+  $('setup-checklist').replaceChildren(...steps.map(([label, done, target]) => {
+    const item = document.createElement('li');
+    const link = document.createElement('a'); link.href = target;
+    link.textContent = `${done ? '✓' : '○'} ${label}${label === 'Connect VS Code' ? ' (follow instructions)' : ''}`;
+    item.dataset.complete = String(done); item.append(link); return item;
+  }));
 }
 
 function clearLogin() {
@@ -249,6 +270,13 @@ function policyField(labelText, id, input) {
 
 function renderKeys(keys) {
   if (!keys.length) return renderMessage("No API keys yet. Create one above to get started.", "empty");
+  const query = $('key-search').value.trim().toLocaleLowerCase();
+  const filter = $('key-filter').value;
+  keys = keys.filter(key => {
+    const status = isExpired(key.expiresAt) ? 'expired' : key.active ? 'active' : 'inactive';
+    return (filter === 'all' || status === filter) && [key.name, key.id, key.workspaceRoot].some(value => String(value || '').toLocaleLowerCase().includes(query));
+  });
+  if (!keys.length) return renderMessage('No keys match your search and status filter.', 'empty');
   const fragment = document.createDocumentFragment();
   keys.forEach((key) => {
     const card = document.createElement("article"); card.className = "key-card";
@@ -263,6 +291,8 @@ function renderKeys(keys) {
     appendMeta(details, `RPM ${key.requestsPerMinute || 60} · ${key.requestCount || 0} requests · ${key.failureCount || 0} failures · ${Number(key.inputTokens || 0) + Number(key.outputTokens || 0)} tokens`);
     appendMeta(details, `Last used ${formatDate(key.lastUsedAt)} · Expires ${key.expiresAt ? formatDate(key.expiresAt) : "Never"}`);
     appendMeta(details, progressText(key));
+    const account = healthData?.keys?.find(entry => entry.id === key.id)?.account;
+    appendMeta(details, account?.email ? `Account hint (unverified): ${account.email}` : 'Codex account: identity unavailable; use sign-in to select your account.');
 
     const stateButton = document.createElement("button"); stateButton.className = "secondary"; stateButton.type = "button";
     stateButton.textContent = key.active ? "Deactivate" : "Activate";
@@ -273,6 +303,12 @@ function renderKeys(keys) {
     test.setAttribute("aria-label", "Test connection for " + (key.name || key.id));
     test.addEventListener("click", () => { if (setupKeyId !== key.id) { clearLogin(); setupKeyId = key.id; renderChoices(); deviceLogin("GET"); } testConnection(key.id, test); });
     actions.append(test);
+    const login = document.createElement('button'); login.type = 'button'; login.className = 'secondary';
+    login.textContent = setupData.keys.find(entry => entry.id === key.id)?.authStatus === 'credentials_found' ? 'Sign in again' : 'Sign in to Codex';
+    login.setAttribute('aria-label', `Sign in to Codex for ${key.name || key.id}`);
+    login.disabled = !key.active || expired;
+    login.addEventListener('click', () => { clearLogin(); setupKeyId = key.id; renderChoices(); $('login-codex').scrollIntoView({block:'center'}); deviceLogin(); });
+    actions.append(login);
     if (!key.active) {
       const deleteButton = document.createElement("button"); deleteButton.className = "danger"; deleteButton.type = "button"; deleteButton.textContent = "Delete permanently";
       deleteButton.setAttribute("aria-label", `Permanently delete API key ${key.name || key.id}`);
@@ -308,6 +344,7 @@ async function refreshDashboard() {
     const [keyBody, metrics] = await Promise.all([api(), requestJson("/admin/metrics")]);
     dashboardKeys = Array.isArray(keyBody.data) ? keyBody.data : [];
     try { setupData = await requestJson("/admin/setup"); } catch (error) { setupData = {models:[],keys:[]}; $("test-result").textContent = "Setup status unavailable: " + error.message; }
+    try { healthData = await requestJson('/admin/health'); } catch { healthData = undefined; }
     renderChoices(); renderKeys(dashboardKeys); renderMetrics(metrics); await loadHistory();
     if (previousKeyId !== setupKeyId) { clearLogin(); deviceLogin("GET"); }
     setStatus(setupConfigError ? `Could not load setup configuration: ${setupConfigError}` : "Dashboard up to date", Boolean(setupConfigError));
@@ -382,6 +419,40 @@ elements.form.addEventListener("submit", async (event) => {
 
 document.querySelectorAll("[data-copy]").forEach((button) => button.addEventListener("click", () => copyText(button.dataset.copy, button)));
 elements.refresh.addEventListener("click", refreshDashboard);
+$('key-search').addEventListener('input', () => renderKeys(dashboardKeys));
+$('key-filter').addEventListener('change', () => renderKeys(dashboardKeys));
+$('health-check').addEventListener('click', async () => {
+  const button = $('health-check'); button.disabled = true;
+  $('health-results').textContent = 'Checking local gateway…';
+  try {
+    healthData = await requestJson('/admin/health');
+    const gateway = healthData.gateway;
+    const checks = [
+      ['Gateway', gateway.ready, 'Responding', 'Unavailable or draining; restart the gateway.'],
+      ['Workspace', gateway.workspaceAccessible, 'accessible', 'Cannot access folder. Check that it exists and grant folder access in macOS/Windows settings.'],
+      ['Private state', gateway.stateAccessible, 'accessible', 'Cannot access private state. Check app data folder permissions.'],
+      ['Key store', gateway.keyStoreAccessible, 'accessible', 'Cannot read saved keys. Check the key store location and permissions; do not delete the store.'],
+    ];
+    $('health-results').replaceChildren(...checks.map(([name, ok, good, fix]) => {
+      const p = document.createElement('p'); p.textContent = `${ok ? '✓' : '⚠'} ${name}: ${ok ? good : fix}`; return p;
+    }));
+    for (const key of healthData.keys || []) {
+      const p = document.createElement('p');
+      p.textContent = `${dashboardKeys.find(entry => entry.id === key.id)?.name || key.id}: ${key.authStatus === 'credentials_found' ? 'Credentials saved; Test connection to verify with provider.' : 'Sign in to Codex required.'}${key.workspaceAccessible ? '' : ' Workspace inaccessible.'}`;
+      $('health-results').append(p);
+    }
+    renderKeys(dashboardKeys);
+  } catch (error) { $('health-results').textContent = `Health check failed: ${error.message}. Check the desktop gateway status and restart if needed.`; }
+  finally { button.disabled = false; }
+});
+$('diagnostic-check').addEventListener('click', async () => {
+  const button = $('diagnostic-check'); button.disabled = true;
+  $('diagnostic-report').hidden = false; $('diagnostic-report').textContent = 'Preparing sanitized report…'; $('diagnostic-copy').hidden = true;
+  try { $('diagnostic-report').textContent = JSON.stringify(await requestJson('/admin/diagnostics'), null, 2); $('diagnostic-copy').hidden = false; }
+  catch (error) { $('diagnostic-report').textContent = `Report unavailable: ${error.message}`; }
+  finally { button.disabled = false; }
+});
+$('diagnostic-copy').addEventListener('click', () => copyText('diagnostic-report', $('diagnostic-copy')));
 document.querySelector("#setup-platform").addEventListener("change", renderSetup);
 $("setup-key").addEventListener("change", () => { clearLogin(); setupKeyId = $("setup-key").value; $("setup-secret").value = secrets.get(setupKeyId) || ""; renderSetup(); deviceLogin("GET"); });
 $("setup-secret").addEventListener("input", () => { secrets.set(setupKeyId, $("setup-secret").value); renderSetup(); });

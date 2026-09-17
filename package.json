@@ -1,13 +1,14 @@
 {
   "name": "codex-cli-api",
-  "version": "0.1.1",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "node --env-file-if-exists=.env --import=tsx/esm --watch src/server.ts",
     "start": "node --env-file-if-exists=.env --import=tsx/esm src/server.ts",
-    "test": "vitest run test",
+    "test": "node node_modules/vitest/vitest.mjs run test",
     "test:browser": "node node_modules/@playwright/test/cli.js test",
+    "test:release": "node --test scripts/release-policy.checks.mjs scripts/release-assets.checks.mjs",
     "check": "node --check src/public/app.js && node --check desktop/app.js && node --check scripts/prepare-desktop.mjs && node --check scripts/build-dmg.mjs && node node_modules/typescript/bin/tsc --noEmit",
     "key:create": "node --env-file-if-exists=.env --import=tsx/esm src/create-key.ts",
     "desktop:prepare": "node scripts/prepare-desktop.mjs",

@@ -1,8 +1,14 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Codex CLI API",
-  "version": "0.1.1",
+  "version": "0.2.1",
   "identifier": "com.codexcliapi.desktop",
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMxMTQ0RjVFNkZEREMwODMKUldTRHdOMXZYazhVd1YwSWh2d0Q5WnJTMVhiYXRmeUFLSlpYN3YybVpyVGxQSm96QkNEMGFMdUEK",
+      "endpoints": ["https://github.com/dhruv2003/CODEX-CLI-API/releases/latest/download/latest.json"]
+    }
+  },
   "build": { "frontendDist": "../desktop", "beforeDevCommand": "npm run desktop:prepare", "beforeBuildCommand": "npm run desktop:prepare" },
   "app": {
     "withGlobalTauri": true,

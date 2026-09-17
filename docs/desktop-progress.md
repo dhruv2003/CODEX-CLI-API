@@ -1,5 +1,24 @@
 # Tauri desktop progress
 
+## Release workflow and simplification — 2026-09-17
+
+- [x] Remove app-level backup/restore UI, routes and encryption/import code; preserve existing data and legacy migration safeguards.
+- [x] Manual macOS Apple Silicon + Windows x64 GitHub Actions builds from one version tag, three-day artifact retention, draft-only staging.
+- [x] Verify updater signatures, stage versioned assets, produce combined `latest.json` and `SHA256SUMS`; refuse published releases and overwrites.
+- [x] Local checks: 104 backend tests, 14 browser tests, 10 release checks, TypeScript/JavaScript checks. Existing Tauri-signed archive verified; modified archive rejected.
+- [ ] Commit/push reviewed work and configure the GitHub updater signing secret.
+- [ ] Run hosted builds and test both actual installers before manually publishing.
+
+No installed-app replacement, tag creation, remote workflow dispatch or public release was performed in this change. Earlier sections below are historical snapshots.
+
+## v0.2.0 local testing — 2026-09-15
+
+- Health checks, sanitized diagnostics, key search/status filters and setup checklist implemented.
+- Tray controls, opt-in launch at login, explicit close behavior, signed updater checks/download/confirmation and safe idle shutdown implemented.
+- Manual artifact/draft release workflow prepared; not pushed or run remotely.
+- Verification: 106 backend tests, 13 browser tests, 5 native tests, 5 release-policy checks; packaged runtime smoke passed. Signed archive verified using Minisign and a mutated archive rejected. DMG mounted and contents verified.
+- Local app and DMG v0.2.0 available in release/. Installed v0.1.1 unchanged. Apple notarization, Windows machine validation and an installed end-to-end upgrade remain unverified.
+
 ## v0.1.1 deletion fix and installation
 
 - [x] Replace unsupported browser confirm with an accessible in-page confirmation dialog.

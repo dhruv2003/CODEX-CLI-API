@@ -1,6 +1,6 @@
 import { constants } from 'node:fs'
 import { timingSafeEqual } from 'node:crypto'
-import { access, realpath, rm, stat } from 'node:fs/promises'
+import { access, realpath, rm, stat, open } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -67,6 +67,17 @@ export function createApp(overrides: Partial<Dependencies> = {}) {
     })
   }
   app.use(requestContext)
+  let updatePrepared = false
+  let pendingRequests = 0
+  app.use((request, response, next) => {
+    if (['/admin/prepare-update', '/admin/cancel-update'].includes(request.path)) return next()
+    if (updatePrepared) return sendError(response, 503, 'Gateway paused for update.', null, 'update_prepared', 'server_error')
+    pendingRequests++
+    let finished = false
+    const finish = () => { if (!finished) { finished = true; pendingRequests-- } }
+    response.once('finish', finish); response.once('close', finish)
+    next()
+  })
   const history: Record<string, unknown>[] = []
   const tests = new Map<string, { ok: boolean; code: string; message: string; model: string; testedAt: string }>()
   app.use((request, response, next) => {
@@ -95,6 +106,30 @@ export function createApp(overrides: Partial<Dependencies> = {}) {
     next()
   })
   app.use(express.json({ limit: '1mb' }))
+  app.post('/admin/prepare-update', localAdmin, (_request, response) => {
+    const capacity = admission.stats()
+    if (pendingRequests || lifecycle.pendingCount || capacity.active || capacity.queued || loginManager.hasRunningLogin) return sendError(response, 409, 'Finish active requests and sign-ins before updating.', null, 'gateway_busy')
+    updatePrepared = true
+    response.json({ ready: true })
+  })
+  app.post('/admin/cancel-update', localAdmin, (_request, response) => { updatePrepared = false; response.json({ ready: true }) })
+  const health = async () => {
+    const accessible = async (path: string) => { try { await access(path, constants.R_OK | constants.W_OK); return (await stat(path)).isDirectory() } catch { return false } }
+    const [workspaceAccessible, stateAccessible, keyStoreAccessible] = await Promise.all([accessible(config.workspaceRoot), accessible(config.codexStateRoot), accessible(dirname(config.keyFile))])
+    const gateway = { ready: workspaceAccessible && stateAccessible && keyStoreAccessible && !lifecycle.isStopping && !updatePrepared, workspaceAccessible, stateAccessible, keyStoreAccessible, capacity: admission.stats() }
+    const entries = await Promise.all((await keys.list()).map(async key => {
+      let workspaceAccessible = false
+      try { const path = await safeDirectory(config.workspaceRoot, key.workspaceRoot ?? '.'); workspaceAccessible = await accessible(path) } catch { /* inaccessible */ }
+      const authStatus = await credentialStatus(config.codexStateRoot, key.id)
+      return { id: key.id, active: key.active, workspaceAccessible, authStatus, loginStatus: loginManager.get(key.id).status, account: await accountHint(config.codexStateRoot, key.id), ready: gateway.ready && workspaceAccessible && key.active && (key.expiresAt === null || Date.parse(key.expiresAt) > Date.now()) && authStatus === 'credentials_found' && tests.get(key.id)?.ok === true }
+    }))
+    return { checkedAt: new Date().toISOString(), gateway, keys: entries }
+  }
+  app.get('/admin/health', localAdmin, asyncHandler(async (_request, response) => { response.set('Cache-Control', 'no-store').json(await health()) }))
+  app.get('/admin/diagnostics', localAdmin, asyncHandler(async (_request, response) => {
+    const status = await health()
+    response.set('Cache-Control', 'no-store').json({ version: 1, generatedAt: status.checkedAt, gateway: status.gateway, keys: { total: status.keys.length, ready: status.keys.filter(key => key.ready).length, credentialsFound: status.keys.filter(key => key.authStatus === 'credentials_found').length, inaccessibleWorkspaces: status.keys.filter(key => !key.workspaceAccessible).length }, recentRequests: history.slice(0, 100).map(item => ({ status: ['success', 'failed', 'aborted'].includes(String(item.status)) ? item.status : 'unknown', httpStatus: item.httpStatus, durationMs: item.durationMs, inputTokens: item.inputTokens, outputTokens: item.outputTokens, timestamp: item.timestamp })), retention: 'memory', sessionCredentialsIncluded: false })
+  }))
   app.get('/healthz', (_request, response) => { response.json({ ok: true }) })
   app.get('/readyz', asyncHandler(async (_request, response) => {
     try {
@@ -573,6 +608,24 @@ async function credentialStatus(root: string, id: string): Promise<'credentials_
     await access(file, constants.R_OK)
     return 'credentials_found'
   } catch (error) { return (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'missing' : 'unreadable' }
+}
+
+async function accountHint(root: string, id: string): Promise<{ email: string; verified: false } | null> {
+  if (!/^key_[0-9a-f]{16}$/.test(id)) return null
+  let file
+  try {
+    file = await open(resolve(root, id, 'auth.json'), constants.O_RDONLY | constants.O_NOFOLLOW)
+    const details = await file.stat()
+    if (!details.isFile() || details.size > 64_000) return null
+    const buffer = Buffer.alloc(64_001)
+    const { bytesRead } = await file.read(buffer, 0, buffer.length, 0)
+    if (bytesRead > 64_000) return null
+    const auth = JSON.parse(buffer.subarray(0, bytesRead).toString('utf8'))
+    const token = auth?.tokens?.id_token
+    if (typeof token !== 'string' || token.length > 32_000) return null
+    const claims = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8'))
+    return typeof claims.email === 'string' && claims.email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(claims.email) ? { email: claims.email, verified: false } : null
+  } catch { return null } finally { await file?.close() }
 }
 
 function logExecutionFailure(response: Response, execution: AdmittedExecution): void {

@@ -3,6 +3,7 @@ import { copyFile, lstat, mkdir, mkdtemp, readFile, rm, symlink } from 'node:fs/
 import { homedir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { verifyAppMetadata } from './release-policy.mjs';
 
 // A headless DMG builder: no Finder automation or AppleScript permissions needed.
 if (process.platform !== 'darwin') throw new Error('DMG packaging must run on macOS.');
@@ -31,8 +32,13 @@ for (const folder of [release, cache]) {
 const previousDmg = await existing(dmg);
 if (previousDmg && (!previousDmg.isFile() || previousDmg.isSymbolicLink())) throw new Error(`Refusing unsafe image output: ${dmg}`);
 
-run(process.execPath, [join(root, 'node_modules', '@tauri-apps', 'cli', 'tauri.js'), 'build', '--bundles', 'app']);
+if (process.argv.slice(2).some((arg) => arg !== '--skip-build')) throw new Error('Only --skip-build is supported.');
+if (!process.argv.includes('--skip-build')) {
+  run(process.execPath, [join(root, 'node_modules', '@tauri-apps', 'cli', 'tauri.js'), 'build', '--bundles', 'app']);
+}
 if (!(await lstat(builtApp)).isDirectory()) throw new Error(`App bundle not found: ${builtApp}`);
+const metadata = (key) => run('/usr/libexec/PlistBuddy', ['-c', `Print :${key}`, join(builtApp, 'Contents', 'Info.plist')], { encoding: 'utf8', stdio: 'pipe' }).trim();
+verifyAppMetadata(config, metadata('CFBundleIdentifier'), metadata('CFBundleShortVersionString'));
 const previousApp = await existing(finalApp);
 if (previousApp) {
   if (!previousApp.isDirectory() || previousApp.isSymbolicLink()) throw new Error(`Refusing unsafe app output: ${finalApp}`);

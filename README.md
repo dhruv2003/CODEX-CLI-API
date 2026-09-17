@@ -11,6 +11,8 @@ The Tauri app bundles Node and Codex, saves settings in the OS app-data folder, 
 
 Build a macOS installer: `npm ci` then `npm run desktop:dmg` (Node, Rust, and Xcode Command Line Tools required for builders). The app and DMG are saved under `release/`; the DMG includes `README.txt` with creator information and setup steps. See [desktop build and installation instructions](docs/desktop.md).
 
+For hosted builds, the manual GitHub Actions workflow builds macOS Apple Silicon and Windows x64 installers from one version tag, then stages a GitHub draft release with signed updater artifacts. Publication stays manual. See [the release guide](docs/releasing.md) for setup, testing and publishing.
+
 ## Scope and security
 
 The gateway accepts OpenAI-compatible Chat Completions and Responses requests.

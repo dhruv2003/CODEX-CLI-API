@@ -48,7 +48,6 @@ describe('local key admin', () => {
       expect(appSource).toContain('unavailableMetrics')
       expect(appSource).toContain('aria-label')
       expect(appSource).toContain('method: "DELETE"')
-      expect(appSource).toContain('confirm(')
       expect(appSource).toContain('workspaceRoot')
       expect(appSource).toContain('renderSetup')
       expect(appSource).toContain('setup-platform')

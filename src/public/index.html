@@ -20,6 +20,18 @@
         <p id="status" class="status" role="status">Loading keys…</p>
       </header>
       <p id="migration-notice" class="setup-note" role="status" hidden></p>
+      <section class="panel quick-start" aria-label="Setup checklist">
+        <h2>Your setup, step by step</h2>
+        <ol id="setup-checklist"></ol>
+        <p class="muted">Status is for the selected key. A saved login is not proof that credentials are still valid.</p>
+      </section>
+      <section class="panel support-panel" aria-labelledby="health-title">
+        <h2 id="health-title">Health &amp; diagnostics</h2>
+        <p class="muted">Local checks only. No model request or account quota is used.</p>
+        <div class="support-actions"><button id="health-check" type="button">Run health check</button><button id="diagnostic-check" type="button" class="secondary">Prepare diagnostic report</button></div>
+        <div id="health-results" role="status"></div>
+        <pre id="diagnostic-report" hidden tabindex="0"></pre><button id="diagnostic-copy" type="button" class="secondary" hidden>Copy diagnostic report</button>
+      </section>
 
       <section class="overview" aria-label="Service overview" aria-live="polite" aria-busy="true">
         <article class="overview-card">
@@ -93,6 +105,7 @@
           </div>
           <button id="refresh" class="secondary" type="button">Refresh</button>
         </div>
+        <div class="key-filters"><label>Search keys<input id="key-search" type="search" placeholder="Name, ID or workspace"></label><label>Key status<select id="key-filter"><option value="all">All keys</option><option value="active">Active</option><option value="inactive">Deactivated</option><option value="expired">Expired</option></select></label></div>
         <div id="keys" class="key-list" aria-live="polite" aria-busy="true"></div>
       </section>
 

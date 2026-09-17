@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { createServer, type Server } from 'node:http'
-import { access, mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, realpath, rm, writeFile, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { ApiKeyStore } from '../src/auth.js'
 import { CodexSessionManager } from '../src/codex.js'
 import { createApp } from '../src/server.js'
@@ -65,6 +65,39 @@ test('desktop dashboard avoids duplicate branding and unsupported tunnel setup',
   await expect(page.locator('.topbar .brand')).toBeVisible()
   await expect(page.locator('.creator-credit')).toContainText('Created by Dhruv')
   await expect(page.locator('.creator-credit a')).toHaveAttribute('href', 'https://thisisdhruv.in')
+})
+
+test('real dashboard stays usable below compact launcher with settings in an overlay', async ({page}) => {
+  // Forward to the real fixture server through Playwright's request context;
+  // Chromium's public-host-to-loopback restrictions do not model Tauri's origin.
+  await page.route(baseURL + '/**', async route => route.fulfill({response:await route.fetch()}))
+  await page.route('http://launcher.test/**', async route => {
+    const name = new URL(route.request().url()).pathname.slice(1) || 'index.html'
+    if (!['index.html','app.js','styles.css','branding.css','logo.png'].includes(name)) return route.abort()
+    await route.fulfill({body:await readFile(resolve('desktop',name)),contentType:name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':name.endsWith('.png')?'image/png':'text/html'})
+  })
+  await page.addInitScript(({url,workspace}) => {
+    if (location.hostname !== 'launcher.test') return
+    ;(window as any).__TAURI__ = {core:{invoke:async (command:string) => {
+      if (command === 'check_for_update') throw new Error('Could not fetch a valid release JSON from the remote')
+      if (command !== 'desktop_status') throw new Error('Unexpected native command')
+      return {running:true,dashboardUrl:url+'/#desktopToken='+'a'.repeat(64),settings:{workspaceRoot:workspace,port:Number(new URL(url).port)}}
+    }}}
+  }, {url:baseURL,workspace:project})
+  await page.setViewportSize({width:1000,height:700})
+  await page.goto('http://launcher.test')
+  await expect(page.frameLocator('#dashboard').getByRole('heading',{name:'Your setup, step by step'})).toBeVisible()
+  await expect(page.locator('#update-status')).toBeHidden()
+  await page.screenshot({path:'output/playwright/desktop-real-dashboard.png'})
+  await page.getByRole('button',{name:'Settings',exact:true}).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.locator('#update-status')).toContainText('Update information isn’t available yet')
+  await expect(page.locator('#update-error-detail')).toBeHidden()
+  await page.screenshot({path:'output/playwright/desktop-settings-drawer.png'})
+  await page.keyboard.press('Escape')
+  await page.setViewportSize({width:760,height:600})
+  expect((await page.locator('#dashboard').boundingBox())!.height).toBeGreaterThan(500)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
 
 test('onboarding creates a key, copies platform snippets, selects models and verifies readiness', async ({ page, context }) => {
@@ -134,6 +167,36 @@ test('invalid workspace stays in the form with an actionable error', async ({ pa
   await expect(page.locator('#workspace-error')).not.toBeEmpty()
   expect(new URL(page.url()).search).toBe('')
   await expect(page.locator('#metric-total-keys')).toHaveText('0')
+})
+
+test('key search and status filters do not hide onboarding or change key state', async ({ page }) => {
+  const store = new ApiKeyStore(join(root, 'keys.json'))
+  const active = await store.create('Work project', { workspaceRoot: '.' })
+  const inactive = await store.create('Personal project', { workspaceRoot: '.' })
+  await store.update(inactive.id, { active: false })
+  await page.goto(baseURL)
+  await expect(page.locator('.key-card')).toHaveCount(2)
+  await page.getByLabel('Search keys').fill('Personal')
+  await expect(page.locator('.key-card')).toHaveCount(1)
+  await expect(page.locator('.key-card')).toContainText('Personal project')
+  await page.getByLabel('Key status').selectOption('active')
+  await expect(page.locator('#keys')).toContainText('No keys match')
+  await page.getByLabel('Search keys').fill('')
+  await expect(page.locator('.key-card')).toHaveCount(1)
+  await expect(page.locator('.key-card')).toContainText('Work project')
+  await expect(page.getByLabel('Setup checklist')).toContainText('Choose workspace')
+  expect((await store.list()).find(key => key.id === active.id)?.active).toBe(true)
+})
+
+test('health checks and diagnostic reports never trigger inference', async ({ page }) => {
+  await page.goto(baseURL)
+  await page.getByRole('button', { name: 'Run health check', exact: true }).click()
+  await expect(page.locator('#health-results')).toContainText('Workspace')
+  await expect(page.locator('#health-results')).toContainText('accessible')
+  await page.getByRole('button', { name: 'Prepare diagnostic report', exact: true }).click()
+  await expect(page.locator('#diagnostic-report')).toBeVisible()
+  await expect(page.locator('#diagnostic-report')).not.toContainText(project)
+  await expect(page.locator('#metric-requests')).toHaveText('0')
 })
 
 test('permanent deletion uses an in-app confirmation, supports cancel and removes only the confirmed key', async ({ page }) => {

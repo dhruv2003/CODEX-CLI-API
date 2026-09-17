@@ -4,14 +4,17 @@ use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use std::{fs, io::{BufRead, BufReader, Write}, path::{Path, PathBuf}, process::{Child, Command, Stdio}, sync::{mpsc, Mutex}, thread, time::{Duration, Instant}};
 use tauri::Manager;
+mod health;
+mod updates;
+mod tray;
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct Settings { workspace_root: String, port: u16 }
+struct Settings { workspace_root: String, port: u16, #[serde(default)] launch_at_login: bool, #[serde(default)] keep_running_on_close: bool }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Status { running: bool, dashboard_url: Option<String>, settings: Settings, data_dir: String, error: Option<String> }
+struct Status { running: bool, dashboard_url: Option<String>, settings: Settings, data_dir: String, error: Option<String>, health: health::Health }
 
 struct Gateway { child: Child, url: String }
 struct Desktop { settings: Settings, data_dir: PathBuf, runtime: PathBuf, gateway: Option<Gateway>, error: Option<String> }
@@ -24,7 +27,7 @@ fn validate_settings(settings: &Settings, data_dir: &Path) -> Result<Settings, S
     let workspace = dunce::canonicalize(workspace).map_err(|e| e.to_string())?;
     let data = dunce::canonicalize(data_dir).map_err(|e| e.to_string())?;
     if workspace.starts_with(&data) || data.starts_with(&workspace) { return Err("Workspace must not contain the app's private data folder or be inside it.".into()); }
-    Ok(Settings { workspace_root: workspace.to_string_lossy().into_owned(), port: settings.port })
+    Ok(Settings { workspace_root: workspace.to_string_lossy().into_owned(), ..settings.clone() })
 }
 
 fn protect_existing_key_scopes(current: &Settings, next: &Settings, data_dir: &Path) -> Result<(), String> {
@@ -53,7 +56,7 @@ impl Desktop {
                 _ => {}
             }
         }
-        Status { running: self.gateway.is_some(), dashboard_url: self.gateway.as_ref().map(|g| g.url.clone()), settings: self.settings.clone(), data_dir: self.data_dir.to_string_lossy().into_owned(), error: self.error.clone() }
+        Status { running: self.gateway.is_some(), dashboard_url: self.gateway.as_ref().map(|g| g.url.clone()), settings: self.settings.clone(), data_dir: self.data_dir.to_string_lossy().into_owned(), error: self.error.clone(), health: health::inspect(&self.settings, &self.data_dir, &self.runtime, self.gateway.is_some()) }
     }
 
     fn stop(&mut self) {
@@ -142,14 +145,44 @@ async fn save_settings(settings: Settings, app: tauri::AppHandle) -> Result<Stat
     tauri::async_runtime::spawn_blocking(move || {
     let state = app.state::<Mutex<Desktop>>();
     let mut desktop = state.lock().map_err(|_| "App state unavailable")?;
+    if updates::installing(&app) { return Err("An update is being installed.".into()); }
     if desktop.status().running { return Err("Stop the gateway before changing settings.".into()); }
     let settings = validate_settings(&settings, &desktop.data_dir)?;
     protect_existing_key_scopes(&desktop.settings, &settings, &desktop.data_dir)?;
     let bytes = serde_json::to_vec_pretty(&settings).map_err(|e| e.to_string())?;
-    fs::write(desktop.data_dir.join("settings.json"), bytes).map_err(|e| format!("Could not save settings: {e}"))?;
+    use tauri_plugin_autostart::ManagerExt;
+    let previous = app.autolaunch().is_enabled().map_err(|e| e.to_string())?;
+    if previous != settings.launch_at_login {
+        if settings.launch_at_login { app.autolaunch().enable() } else { app.autolaunch().disable() }.map_err(|e| format!("Could not change launch at login: {e}"))?;
+    }
+    if let Err(e) = fs::write(desktop.data_dir.join("settings.json"), bytes) {
+        if previous != settings.launch_at_login { let _ = if previous { app.autolaunch().enable() } else { app.autolaunch().disable() }; }
+        return Err(format!("Could not save settings: {e}"));
+    }
     desktop.settings = settings;
     desktop.error = None;
     Ok(desktop.status())
+    }).await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn save_preferences(launch_at_login: bool, keep_running_on_close: bool, app: tauri::AppHandle) -> Result<Status, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        use tauri_plugin_autostart::ManagerExt;
+        let state = app.state::<Mutex<Desktop>>();
+        let mut desktop = state.lock().map_err(|_| "App state unavailable")?;
+        if updates::installing(&app) { return Err("An update is being installed.".into()); }
+        let previous = app.autolaunch().is_enabled().map_err(|e| e.to_string())?;
+        let mut settings = desktop.settings.clone();
+        settings.launch_at_login = launch_at_login; settings.keep_running_on_close = keep_running_on_close;
+        let bytes = serde_json::to_vec_pretty(&settings).map_err(|e| e.to_string())?;
+        if previous != launch_at_login { if launch_at_login { app.autolaunch().enable() } else { app.autolaunch().disable() }.map_err(|e| format!("Could not change launch at login: {e}"))?; }
+        if let Err(e) = fs::write(desktop.data_dir.join("settings.json"), bytes) {
+            if previous != launch_at_login { let _ = if previous { app.autolaunch().enable() } else { app.autolaunch().disable() }; }
+            return Err(format!("Could not save preferences: {e}"));
+        }
+        desktop.settings = settings;
+        Ok(desktop.status())
     }).await.map_err(|e| e.to_string())?
 }
 
@@ -158,6 +191,7 @@ async fn start_gateway(app: tauri::AppHandle) -> Result<Status, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let state = app.state::<Mutex<Desktop>>();
         let mut desktop = state.lock().map_err(|_| "App state unavailable")?;
+        if updates::installing(&app) { return Err("An update is being installed.".into()); }
         desktop.start()
     }).await.map_err(|e| e.to_string())?
 }
@@ -167,6 +201,7 @@ async fn stop_gateway(app: tauri::AppHandle) -> Result<Status, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let state = app.state::<Mutex<Desktop>>();
         let mut desktop = state.lock().map_err(|_| "App state unavailable")?;
+        if updates::installing(&app) { return Err("An update is being installed.".into()); }
         desktop.stop(); desktop.error = None; Ok(desktop.status())
     }).await.map_err(|e| e.to_string())?
 }
@@ -190,6 +225,9 @@ async fn open_creator_website() -> Result<(), String> {
 
 fn main() {
     let app = tauri::Builder::default()
+      .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
+      .plugin(tauri_plugin_updater::Builder::new().build())
+      .manage(updates::Pending::default())
       .plugin(tauri_plugin_single_instance::init(|app, _, _| {
           if let Some(window) = app.get_webview_window("main") { let _ = window.show(); let _ = window.set_focus(); }
       }))
@@ -201,16 +239,30 @@ fn main() {
         let settings = match fs::read(data_dir.join("settings.json")) {
             Ok(bytes) => match serde_json::from_slice::<Settings>(&bytes) {
                 Ok(value) => value,
-                Err(_) => { error = Some("Saved settings could not be read. Choose a workspace and save settings again.".into()); Settings { workspace_root: String::new(), port: 3081 } }
+                Err(_) => { error = Some("Saved settings could not be read. Choose a workspace and save settings again.".into()); Settings { workspace_root: String::new(), port: 3081, launch_at_login: false, keep_running_on_close: false } }
             },
-            Err(_) => Settings { workspace_root: String::new(), port: 3081 },
+            Err(_) => Settings { workspace_root: String::new(), port: 3081, launch_at_login: false, keep_running_on_close: false },
         };
         let runtime = if cfg!(debug_assertions) { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../desktop-runtime") } else { app.path().resource_dir()?.join("runtime") };
         app.manage(Mutex::new(Desktop { settings, data_dir, runtime, gateway: None, error }));
+        tray::setup(app)?;
         Ok(())
-    }).invoke_handler(tauri::generate_handler![desktop_status, save_settings, start_gateway, stop_gateway, choose_workspace, open_codex_login, open_creator_website])
+    }).on_window_event(|window, event| {
+        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            if updates::installing(window.app_handle()) { api.prevent_close(); return; }
+            match window.state::<Mutex<Desktop>>().try_lock() {
+                Ok(desktop) if desktop.settings.keep_running_on_close => { api.prevent_close(); let _ = window.hide(); }
+                Err(_) => api.prevent_close(),
+                _ => {}
+            }
+        }
+    }).invoke_handler(tauri::generate_handler![desktop_status, save_settings, save_preferences, start_gateway, stop_gateway, choose_workspace, open_codex_login, open_creator_website, updates::check_for_update, updates::download_update, updates::install_update])
       .build(tauri::generate_context!()).expect("Unable to initialize Codex CLI API desktop");
     app.run(|app, event| {
+        if let tauri::RunEvent::ExitRequested { api, .. } = &event {
+            if updates::installing(app) { api.prevent_exit(); return; }
+            if app.state::<Mutex<Desktop>>().try_lock().is_err() { api.prevent_exit(); return; }
+        }
         if matches!(event, tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit) {
             if let Ok(mut desktop) = app.state::<Mutex<Desktop>>().lock() { desktop.stop(); }
         }
@@ -221,11 +273,18 @@ fn main() {
 mod tests {
     use super::*;
     #[test]
+    fn old_settings_default_to_no_background_behavior() {
+        let settings: Settings = serde_json::from_str(r#"{"workspaceRoot":"/tmp","port":3081}"#).unwrap();
+        let value = serde_json::to_value(settings).unwrap();
+        assert_eq!(value["launchAtLogin"], false);
+        assert_eq!(value["keepRunningOnClose"], false);
+    }
+    #[test]
     fn existing_keys_lock_workspace_but_allow_port_changes() {
         let root = std::env::temp_dir().join(format!("codex-scope-test-{}", rand::random::<u64>()));
         let data = root.join("private"); let first = root.join("first"); let second = root.join("second");
         for path in [&data, &first, &second] { fs::create_dir_all(path).unwrap(); }
-        let setting = |path: &Path, port| Settings { workspace_root: path.to_string_lossy().into_owned(), port };
+        let setting = |path: &Path, port| Settings { workspace_root: path.to_string_lossy().into_owned(), port, launch_at_login: false, keep_running_on_close: false };
         let current = setting(&first, 3081); let changed = setting(&second, 3081);
         assert!(protect_existing_key_scopes(&current, &changed, &data).is_ok());
         let store = data.join("api-keys.json");
@@ -245,7 +304,7 @@ mod tests {
         let root = std::env::temp_dir().join(format!("codex-desktop-test-{}", rand::random::<u64>()));
         let data = root.join("private"); let workspace = root.join("workspace");
         fs::create_dir_all(&data).unwrap(); fs::create_dir_all(&workspace).unwrap();
-        let setting = |path: &Path, port| Settings { workspace_root: path.to_string_lossy().into_owned(), port };
+        let setting = |path: &Path, port| Settings { workspace_root: path.to_string_lossy().into_owned(), port, launch_at_login: false, keep_running_on_close: false };
         assert!(validate_settings(&setting(&workspace, 3081), &data).is_ok());
         assert!(validate_settings(&setting(Path::new("relative"), 3081), &data).is_err());
         assert!(validate_settings(&setting(&data, 3081), &data).is_err());

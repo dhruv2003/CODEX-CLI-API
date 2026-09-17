@@ -7,6 +7,7 @@ export class RequestLifecycle {
 
   get signal(): AbortSignal { return this.controller.signal }
   get isStopping(): boolean { return this.stopping !== undefined }
+  get pendingCount(): number { return this.pending.size }
 
   track<T>(operation: Promise<T>): Promise<T> {
     this.pending.add(operation)

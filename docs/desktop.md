@@ -74,7 +74,7 @@ The macOS command creates `release/Codex CLI API.app` and `release/Codex CLI API
 - Sign all embedded executables plus the app, then notarize the macOS build with your Apple Developer credentials. Use a Windows signing certificate for public Windows distribution. An unsigned/ad-hoc development build is **not** a notarized public release. See [Tauri signing and distribution](https://v2.tauri.app/distribute/).
 - Include bundled licenses/notices and review any additional third-party runtime notice requirements before public release. This app is independent software, not an official OpenAI product.
 - Keep this repository private if you do not want to publish source. Bundled/minified JavaScript can still be inspected or reverse-engineered; Tauri is not source encryption. Truly private logic must remain on a server or be rewritten as native code (also not immune to reverse engineering).
-- Automatic updates and public publishing are not implemented. Ship replacement installers manually for this first version.
+- Automatic updates use signed artifacts hosted on GitHub Releases. The manual GitHub Actions workflow builds macOS Apple Silicon and Windows x64; local builds remain supported. Review both platforms before publishing. See [the release guide](releasing.md) for signing, draft uploads, and the combined update manifest. Until a compatible manifest is published, update checks cannot offer a release.
 
 ## Bringing an existing local setup into the app
 

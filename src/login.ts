@@ -24,6 +24,8 @@ export class CodexLoginManager {
   private readonly attempts = new Map<string, Attempt>()
   constructor(private readonly config: AppConfig) {}
 
+  get hasRunningLogin(): boolean { return [...this.attempts.values()].some(attempt => !attempt.closed) }
+
   get(keyId: string): LoginState {
     return { ...(this.attempts.get(keyId)?.state ?? { status: 'idle', message: 'Sign in to Codex for this key.' }) }
   }

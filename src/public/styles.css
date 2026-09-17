@@ -188,3 +188,19 @@ code { display: block; min-width: 0; overflow-wrap: anywhere; color: var(--ink);
 #delete-dialog h2 { margin-top: 0; font-size: 24px; }
 #delete-dialog p { line-height: 1.6; overflow-wrap: anywhere; }
 .delete-dialog-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.quick-start { padding: 1.2rem; margin-top: 1rem; }
+#setup-checklist { display: flex; flex-wrap: wrap; gap: .8rem 1.5rem; list-style: none; padding: 0; }
+#setup-checklist a { color: var(--soft); font-size: .85rem; text-decoration: none; }
+#setup-checklist [data-complete="true"] a { color: var(--accent); }
+.key-filters { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: end; }
+.key-filters label:first-child { flex: 1; }
+.key-filters label { font-size: .8rem; }
+.key-filters select { display: block; padding: .55rem; margin-top: .5rem; }
+.support-panel { padding: 1.2rem; }
+.support-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+#health-results { font-size: .85rem; line-height: 1.5; margin-top: 1rem; }
+#diagnostic-report { max-height: 18rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 1rem; background: var(--accent-soft); font-size: .75rem; }
+.support-panel summary { cursor: pointer; font-weight: 700; }
+.support-panel form { margin: 1rem 0; max-width: 38rem; }
+.support-panel form label { display: block; margin-top: .8rem; }
+.support-panel form button { margin-top: 1rem; }
