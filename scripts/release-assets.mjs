@@ -39,8 +39,8 @@ function inspectMacArchive(path, version) {
 
 export function assetNames(version, platform) {
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid version.');
-  if (platform === 'darwin-aarch64') return [`codex-cli-api_${version}_aarch64.dmg`, `codex-cli-api_${version}_aarch64.app.tar.gz`, `codex-cli-api_${version}_aarch64.app.tar.gz.sig`];
-  if (platform === 'windows-x86_64') return [`codex-cli-api_${version}_x64-setup.exe`, `codex-cli-api_${version}_x64-setup.exe.sig`];
+  if (platform === 'darwin-aarch64') return [`sidecar_${version}_aarch64.dmg`, `sidecar_${version}_aarch64.app.tar.gz`, `sidecar_${version}_aarch64.app.tar.gz.sig`];
+  if (platform === 'windows-x86_64') return [`sidecar_${version}_x64-setup.exe`, `sidecar_${version}_x64-setup.exe.sig`];
   throw new Error('Unsupported release platform.');
 }
 

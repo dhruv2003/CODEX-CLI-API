@@ -1,5 +1,5 @@
 {
-  "name": "codex-cli-api",
+  "name": "sidecar",
   "version": "1.4.3",
   "private": true,
   "type": "module",

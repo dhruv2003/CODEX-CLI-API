@@ -19,4 +19,31 @@ describe('Sidecar branding hotfix', () => {
     }
     expect(contents.join('\n')).not.toContain('thesidecar.in')
   })
+
+  it('ships the selected Sidecar brand assets in the app surfaces', async () => {
+    const assetFiles = [
+      'brand-assets/Sidecar_Brand_Assets_Pack/png/app-icon-dark-1024.png',
+      'brand-assets/Sidecar_Brand_Assets_Pack/png/app-icon-light-1024.png',
+      'brand-assets/Sidecar_Brand_Assets_Pack/png/app-icon-blue-1024.png',
+    ]
+    const [desktopLogo, publicLogo, darkMaster, lightMaster, blueMaster] = await Promise.all([
+      readFile(resolve('desktop/logo.png')),
+      readFile(resolve('src/public/logo.png')),
+      readFile(resolve(assetFiles[0])),
+      readFile(resolve(assetFiles[1])),
+      readFile(resolve(assetFiles[2])),
+    ])
+
+    expect(desktopLogo).toEqual(darkMaster)
+    expect(publicLogo).toEqual(lightMaster)
+    expect(blueMaster.byteLength).toBeGreaterThan(0)
+  })
+
+  it('uses Sidecar for the application package names', async () => {
+    const packageJson = JSON.parse(await readFile(resolve('package.json'), 'utf8')) as { name: string }
+    const cargo = await readFile(resolve('src-tauri/Cargo.toml'), 'utf8')
+
+    expect(packageJson.name).toBe('sidecar')
+    expect(cargo).toContain('name = "sidecar-desktop"')
+  })
 })

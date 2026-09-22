@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Sidecar app icon">
+      <rect width="1024" height="1024" rx="220" fill="#F8F9FB"/>
+      <g transform="translate(242 235) scale(2.1)">
+        <path d="M 56 20 L 154 20 L 154 54 L 98 86 L 98 140 L 56 164 Z" fill="#0F172A"/>
+        <path d="M 116 72 L 174 40 L 174 112 L 116 146 Z" fill="#3155FF"/>
+      </g>
+    </svg>

@@ -1,0 +1,12 @@
+{
+  "brand": "Sidecar",
+  "primary_blue": "#3155FF",
+  "charcoal": "#0F172A",
+  "off_white": "#F8F9FB",
+  "white": "#FFFFFF",
+  "usage": {
+    "primary": "Charcoal + Cobalt Blue",
+    "dark_mode": "White + Cobalt Blue on Charcoal",
+    "monochrome": "Black or White only"
+  }
+}

@@ -1,6 +1,6 @@
 [package]
-name = "codex-cli-api-desktop"
-version = "1.4.2"
+name = "sidecar-desktop"
+version = "1.4.3"
 description = "Local Codex API desktop gateway"
 authors = ["Dhruv Bhagatkar"]
 homepage = "https://thisisdhruv.in"

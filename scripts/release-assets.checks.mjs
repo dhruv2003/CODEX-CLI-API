@@ -54,16 +54,16 @@ test('combined manifest requires both complete platforms with matching provenanc
       artifacts: names.map(name => ({ name, sha256: createHash('sha256').update(files.get(name)).digest('hex') })) })));
   }
   const result = combinedMetadata({ tag: 'v0.2.1', version: '0.2.1', commit, repo: 'owner/repo', files, pubkey: f.pubkey });
-  assert.equal(result.latest.platforms['windows-x86_64'].url, 'https://github.com/owner/repo/releases/download/v0.2.1/codex-cli-api_0.2.1_x64-setup.exe');
+  assert.equal(result.latest.platforms['windows-x86_64'].url, 'https://github.com/owner/repo/releases/download/v0.2.1/sidecar_0.2.1_x64-setup.exe');
   assert.equal(result.latest.platforms['darwin-aarch64'].signature, f.signature);
-  assert.match(result.checksums, /codex-cli-api_0.2.1_aarch64.dmg/);
+  assert.match(result.checksums, /sidecar_0.2.1_aarch64.dmg/);
   const stale = new Map(files);
   stale.set('darwin-aarch64.provenance.json', Buffer.from(JSON.stringify({ schemaVersion: 1, version: '0.2.0', commit, platform: 'darwin-aarch64', artifacts: [] })));
   assert.throws(() => combinedMetadata({ tag: 'v0.2.1', version: '0.2.1', commit, repo: 'owner/repo', files: stale, pubkey: f.pubkey }), /provenance/);
   const missing = new Map(files);
-  missing.delete('codex-cli-api_0.2.1_x64-setup.exe.sig');
+  missing.delete('sidecar_0.2.1_x64-setup.exe.sig');
   assert.throws(() => combinedMetadata({ tag: 'v0.2.1', version: '0.2.1', commit, repo: 'owner/repo', files: missing, pubkey: f.pubkey }), /Missing release asset/);
   const tampered = new Map(files);
-  tampered.set('codex-cli-api_0.2.1_aarch64.dmg', Buffer.from('replaced image'));
+  tampered.set('sidecar_0.2.1_aarch64.dmg', Buffer.from('replaced image'));
   assert.throws(() => combinedMetadata({ tag: 'v0.2.1', version: '0.2.1', commit, repo: 'owner/repo', files: tampered, pubkey: f.pubkey }), /checksum mismatch/);
 });
