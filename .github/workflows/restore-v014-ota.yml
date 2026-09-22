@@ -1,0 +1,109 @@
+name: Restore original v0.1.4 OTA assets
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: desktop-release-v0.1.4
+  cancel-in-progress: false
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: de19acc1cc6d333d871ff8fcbf22ae6e6bf2e99b
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 35694793175
+          name: macos-arm64-v0.1.4-signed-draft
+          path: original/macos
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 35694793175
+          name: windows-x64-v0.1.4-signed-draft
+          path: original/windows
+      - name: Verify original bytes and signatures, then restore missing assets only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
+          import { join } from 'node:path';
+          import { createHash } from 'node:crypto';
+          import { execFileSync } from 'node:child_process';
+          import assert from 'node:assert/strict';
+          import { combinedMetadata } from './scripts/release-assets.mjs';
+          const repo = 'dhruv2003/CODEX-CLI-API';
+          const tag = 'v0.1.4';
+          const commit = 'de19acc1cc6d333d871ff8fcbf22ae6e6bf2e99b';
+          const gh = (...args) => execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore','pipe','pipe'] });
+          const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+          const expected = {
+            'codex-cli-api_0.1.4_aarch64.dmg': '067573c72dae4d6a0fb575682beabf9bd7ebb112826a0ebcdbacd97edbf5df40',
+            'codex-cli-api_0.1.4_aarch64.app.tar.gz': '207f998724aba75bbcf1dcb197c5e7efb513a7a56fdc615982b1381ff19e75c2',
+            'codex-cli-api_0.1.4_aarch64.app.tar.gz.sig': 'e000473b145f86e2ec405274443e7b4e614e05d9c606a4224b0144dc30e38993',
+            'codex-cli-api_0.1.4_x64-setup.exe': '2426ac3240ed9fb0fc3f9bd857110e5be5125c7c8e70946fbc7860c0a84112ba',
+            'codex-cli-api_0.1.4_x64-setup.exe.sig': 'e41354a4e5fa8921f17691650885706966c5c99e9c2f9f8d8fd505feb055d56d',
+          };
+          const release = () => JSON.parse(gh('release','view',tag,'--repo',repo,'--json','isDraft,tagName,assets'));
+          const initial = release();
+          assert.equal(initial.tagName, tag);
+          assert.equal(initial.isDraft, false);
+          assert.equal(initial.assets.length, 2, 'Only the two original installers may exist before recovery');
+          for (const asset of initial.assets) {
+            assert(asset.name.endsWith('.dmg') || asset.name.endsWith('.exe'));
+            assert.equal(asset.digest, `sha256:${expected[asset.name]}`);
+          }
+          assert.equal(gh('api',`repos/${repo}/commits/${tag}`,'--jq','.sha').trim(), commit);
+          async function walk(dir) {
+            const paths = [];
+            for (const entry of await readdir(dir,{withFileTypes:true})) {
+              const path = join(dir,entry.name);
+              if (entry.isDirectory()) paths.push(...await walk(path));
+              else { assert(entry.isFile()); paths.push(path); }
+            }
+            return paths;
+          }
+          const paths = await walk('original');
+          const files = new Map();
+          for (const [name,digest] of Object.entries(expected)) {
+            const suffix = ['.app.tar.gz.sig','.app.tar.gz','.exe.sig','.exe','.dmg'].find(s => name.endsWith(s));
+            const matches = paths.filter(path => path.endsWith(suffix));
+            assert.equal(matches.length,1);
+            const bytes = await readFile(matches[0]);
+            assert.equal(hash(bytes),digest,`Original artifact hash: ${name}`);
+            files.set(name,bytes);
+          }
+          for (const platform of ['darwin-aarch64','windows-x86_64']) {
+            const artifacts = Object.entries(expected).filter(([name]) => name.includes(platform === 'darwin-aarch64' ? '_aarch64.' : '_x64-')).map(([name,sha256]) => ({name,sha256}));
+            files.set(`${platform}.provenance.json`,Buffer.from(JSON.stringify({schemaVersion:1,version:'0.1.4',commit,platform,artifacts},null,2)+'\n'));
+          }
+          const config = JSON.parse(await readFile('src-tauri/tauri.conf.json','utf8'));
+          const {checksums} = combinedMetadata({tag,version:'0.1.4',commit,repo,files,pubkey:config.plugins.updater.pubkey});
+          assert.equal(hash(Buffer.from(checksums)),'43c57e92de59a97870e488921195e672a81afb0b1a8f8cdcd302db1b838e34e4');
+          files.set('SHA256SUMS',Buffer.from(checksums));
+          await mkdir('verified-restore');
+          const additions = [];
+          for (const [name,bytes] of files) {
+            if (name.endsWith('.exe') || name.endsWith('.dmg')) continue;
+            await writeFile(join('verified-restore',name),bytes,{flag:'wx'});
+            if (name !== 'latest.json') additions.push(join('verified-restore',name));
+          }
+          console.log('Verified all original hashes, both updater signatures, provenance, and exact original manifest/checksums.');
+          gh('release','upload',tag,'--repo',repo,...additions);
+          for (const asset of release().assets) assert.equal(asset.digest,`sha256:${hash(files.get(asset.name))}`);
+          gh('release','upload',tag,'--repo',repo,'verified-restore/latest.json');
+          const final = release();
+          assert.equal(final.assets.length,9);
+          for (const asset of final.assets) assert.equal(asset.digest,`sha256:${hash(files.get(asset.name))}`);
+          console.log('Restored OTA to the existing v0.1.4 release. Both installers are unchanged.');
+          NODE
