@@ -135,7 +135,7 @@ jobs:
             if (existing && !existing.draft) throw new Error('Refusing to modify a published release.');
             if (!existing) {
               await github.rest.repos.createRelease({
-                ...context.repo, tag_name: tag, name: `Codex CLI API ${tag}`,
+                ...context.repo, tag_name: tag, name: `Sidecar ${tag}`,
                 draft: true, prerelease: false,
                 body: 'Draft staging only. Review and test both platforms before manually publishing. Updater signatures authenticate updates; macOS is ad-hoc signed and not notarized, and Windows is not Authenticode signed.'
               });
