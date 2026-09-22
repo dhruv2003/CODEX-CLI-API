@@ -9,6 +9,7 @@ data/codex-users/
 workspaces/
 *.log
 output/playwright/
+brag-output*/
 desktop-runtime/
 .desktop-cache/
 src-tauri/target/

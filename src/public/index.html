@@ -1,183 +1,86 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="dark light">
-    <title>Codex CLI API — Admin</title>
-    <link rel="stylesheet" href="/admin/styles.css">
-  </head>
-  <body>
-    <main class="shell">
-      <header class="topbar">
-        <div class="brand">
-          <img class="brand-logo" src="/admin/logo.png" alt="Codex CLI API logo">
-          <div>
-            <h1>API Key Manager</h1>
-            <p class="brand-subtitle">Local OpenAI-compatible API Gateway</p>
-          </div>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light">
+  <title>Codex CLI API</title><link rel="stylesheet" href="/admin/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="app-sidebar" aria-label="Primary navigation">
+      <div class="sidebar-brand"><img class="brand-logo" src="/admin/logo.png" alt="Codex CLI API logo"><div><strong>Codex CLI API</strong><span>Local AI gateway</span></div></div>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <button type="button" class="nav-item" data-view="overview" aria-current="page"><span class="nav-icon" aria-hidden="true">◫</span>Overview</button>
+        <button type="button" class="nav-item" data-view="api-keys"><span class="nav-icon" aria-hidden="true">⚿</span>API Keys</button>
+        <button type="button" class="nav-item" data-view="connect"><span class="nav-icon" aria-hidden="true">⇄</span>Connect</button>
+        <button type="button" class="nav-item" data-view="requests"><span class="nav-icon" aria-hidden="true">≡</span>Requests</button>
+        <button type="button" class="nav-item" data-view="diagnostics"><span class="nav-icon" aria-hidden="true">⊞</span>Diagnostics</button>
+        <div class="sidebar-bottom">
+          <div class="theme-switch" role="group" aria-label="Appearance"><span><span aria-hidden="true">◉</span> Theme</span><div><button id="theme-dark" class="theme-button" type="button" aria-label="Dark theme" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 13.3A9 9 0 0 1 10.7 3.2a9 9 0 1 0 10.1 10.1Z"/></svg></button><button id="theme-light" class="theme-button" type="button" aria-label="Light theme" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button></div></div>
+          <div class="sidebar-status"><p><span id="sidebar-status-dot" class="status-dot"></span><span id="sidebar-status">Checking gateway</span><span class="local-badge">LOCAL</span></p><span id="sidebar-endpoint" class="mono">localhost</span></div>
+          <button type="button" class="nav-item" data-view="settings"><span class="nav-icon" aria-hidden="true">⚙</span>Settings</button>
+          <p class="sidebar-credit">Created by Dhruv · <a href="https://thisisdhruv.in" target="_blank" rel="noopener noreferrer">thisisdhruv.in</a></p>
         </div>
-        <p id="status" class="status" role="status">Loading keys…</p>
-      </header>
-      <p id="migration-notice" class="setup-note" role="status" hidden></p>
-      <section class="panel quick-start" aria-label="Setup checklist">
-        <h2>Your setup, step by step</h2>
-        <ol id="setup-checklist"></ol>
-        <p class="muted">Status is for the selected key. A saved login is not proof that credentials are still valid.</p>
-      </section>
-      <section class="panel support-panel" aria-labelledby="health-title">
-        <h2 id="health-title">Health &amp; diagnostics</h2>
-        <p class="muted">Local checks only. No model request or account quota is used.</p>
-        <div class="support-actions"><button id="health-check" type="button">Run health check</button><button id="diagnostic-check" type="button" class="secondary">Prepare diagnostic report</button></div>
-        <div id="health-results" role="status"></div>
-        <pre id="diagnostic-report" hidden tabindex="0"></pre><button id="diagnostic-copy" type="button" class="secondary" hidden>Copy diagnostic report</button>
-      </section>
-
-      <section class="overview" aria-label="Service overview" aria-live="polite" aria-busy="true">
-        <article class="overview-card">
-          <span class="metric-label">API keys</span>
-          <div class="metric-value"><strong id="metric-active-keys">—</strong><span>active</span></div>
-          <p><span id="metric-total-keys">—</span> issued in total</p>
-        </article>
-        <article class="overview-card">
-          <span class="metric-label">Requests</span>
-          <div class="metric-value"><strong id="metric-requests">—</strong></div>
-          <p>Processed across every key</p>
-        </article>
-        <article class="overview-card">
-          <span class="metric-label">Tokens processed</span>
-          <div class="metric-value"><strong id="metric-tokens">—</strong></div>
-          <p>Input and output combined</p>
-        </article>
-        <article class="overview-card">
-          <span class="metric-label">Concurrent work</span>
-          <div class="metric-value"><strong id="metric-capacity-active">—</strong><span>running</span></div>
-          <p><span id="metric-capacity-queued">—</span> waiting in queue</p>
-        </article>
-      </section>
-
-      <section class="panel create-panel" aria-labelledby="create-title">
-        <div class="panel-intro">
-          <p class="eyebrow">NEW CREDENTIAL</p>
-          <h2 id="create-title">Create an API key</h2>
-          <p class="muted">The secret is shown once. Save it before closing this page.</p>
-        </div>
-        <form id="create-form" class="create-form">
-          <div class="form-field">
-            <label for="key-name">Key name</label>
-            <input id="key-name" name="name" maxlength="100" autocomplete="off" placeholder="e.g. local development" required>
+      </nav>
+    </aside>
+    <main class="app-main" id="main-content">
+      <header class="topbar"><div><h1 id="page-title" tabindex="-1">Overview</h1><p id="page-description">Your local gateway at a glance.</p></div><div class="topbar-actions"><button id="page-refresh" type="button" class="secondary" aria-label="Refresh dashboard">↻ Refresh</button><button type="button" data-create-key>+ Create API key</button></div></header>
+      <div class="page-content">
+        <p id="status" class="status" role="status">Loading dashboard…</p>
+        <p id="migration-notice" class="notice" role="status" hidden></p>
+        <section id="view-overview" class="view-panel" data-view-panel="overview" aria-label="Overview">
+          <section class="panel quick-start" aria-label="Setup checklist"><div class="section-heading"><div><h2>Finish setting up your gateway</h2><p class="muted">Complete setup to enable local routing and start connecting clients.</p></div><button id="setup-continue" class="secondary" type="button">Continue setup →</button></div><ol id="setup-checklist" class="progress-steps"></ol></section>
+          <section class="overview" aria-label="Service overview" aria-live="polite" aria-busy="true">
+            <article class="overview-card"><span class="metric-label">Active API keys</span><div class="metric-value"><strong id="metric-active-keys">—</strong><span>of <span id="metric-total-keys">—</span></span></div><p>Scoped to your workspace</p></article>
+            <article class="overview-card"><span class="metric-label">Requests</span><div class="metric-value"><strong id="metric-requests">—</strong></div><p>Across all saved keys</p></article>
+            <article class="overview-card"><span class="metric-label">Tokens processed</span><div class="metric-value"><strong id="metric-tokens">—</strong></div><p>Input and output combined</p></article>
+            <article class="overview-card"><span class="metric-label">Gateway capacity</span><div class="metric-value"><strong id="metric-capacity-active">—</strong><span>running / <span id="metric-capacity-queued">—</span> queued</span></div><p>Current local activity</p></article>
+          </section>
+          <div class="overview-grid"><section class="panel"><div class="section-heading"><h2>Recent requests <span class="section-tag">Latest 5</span></h2><button type="button" class="text-button" data-route="requests">View all →</button></div><div id="overview-history" class="table-scroll"><p class="empty">No requests yet.</p></div></section><section class="panel"><div class="section-heading"><h2>Health summary</h2></div><div id="overview-health"><p class="muted">Checking local services…</p></div><button type="button" class="secondary full-width" data-route="diagnostics">Open Diagnostics →</button></section></div>
+        </section>
+        <section id="view-api-keys" class="view-panel" data-view-panel="api-keys" aria-label="API keys" hidden>
+          <p class="notice">Secrets are shown only once. Store them in your client securely.</p>
+          <div class="content-split"><section class="panel keys-section" aria-labelledby="keys-title"><div class="section-heading"><h2 id="keys-title">Issued keys</h2><button id="refresh" type="button" class="secondary" aria-label="Refresh API keys">↻ Refresh</button></div><div class="key-filters"><label>Search keys<input id="key-search" type="search" placeholder="Search by name, ID, or workspace"></label><label>Key status<select id="key-filter"><option value="all">All keys</option><option value="active">Active</option><option value="inactive">Deactivated</option><option value="expired">Expired</option></select></label></div><div id="keys" class="key-list" aria-live="polite" aria-busy="true"></div></section><aside id="key-detail-panel" class="panel key-detail-panel" aria-labelledby="key-detail-title" hidden><div class="section-heading"><h2 id="key-detail-title">Key details</h2><span id="detail-key-state" class="pill"></span></div><h3 id="detail-key-name"></h3><dl class="detail-list"><div><dt>Workspace scope</dt><dd id="detail-key-scope"></dd></div><div><dt>Rate limit</dt><dd id="detail-key-rate-limit"></dd></div><div><dt>Expiry</dt><dd id="detail-key-expiry"></dd></div><div><dt>Authentication</dt><dd id="detail-key-auth"></dd></div><div><dt>Last connection test</dt><dd id="detail-key-last-test"></dd></div></dl><button type="button" class="secondary full-width" data-route="connect">Configure this key →</button></aside></div>
+        </section>
+        <section id="view-connect" class="view-panel" data-view-panel="connect" aria-label="Connect" hidden>
+          <section id="connect-empty" class="panel empty-state" hidden><span class="empty-icon" aria-hidden="true">⇄</span><h2>Create an API key to connect</h2><p class="muted">Choose a project, create a scoped key, then sign in and test your connection.</p><button type="button" data-create-key>Create your first key</button><button type="button" class="secondary" data-route="onboarding">Use guided setup →</button></section>
+          <div id="connect-content" class="connect-grid">
+            <div id="connect-flow" class="card-stack">
+              <section id="connection-selection" class="panel"><h2><span class="step-number">1</span> Choose what to connect</h2><div class="form-field"><label for="setup-key">API key</label><select id="setup-key"><option value="">Create a key first</option></select></div><div class="form-row"><div class="form-field"><label for="setup-model">Model</label><select id="setup-model"></select></div><div class="form-field"><label for="setup-reasoning">Reasoning level</label><select id="setup-reasoning"></select></div></div><p class="muted">Reasoning applies to the test request. Choose the level separately in VS Code.</p><p id="setup-workspace-root" class="muted path-copy"></p></section>
+              <section id="connect-auth-card" class="panel"><h2><span class="step-number">2</span> Sign in to Codex</h2><p id="login-status" class="muted" role="status">Connect your own Codex account for this key.</p><div class="button-row"><button id="login-codex" type="button" disabled>Sign in to Codex ↗</button><button id="login-again" class="secondary" type="button" hidden>Sign in again</button><button id="login-cancel" class="secondary" type="button" hidden>Cancel sign-in</button></div><div class="login-device"><a id="login-link" target="_blank" rel="noopener noreferrer" hidden>Open Codex sign-in ↗</a><code id="login-code"></code><button id="login-copy" type="button" class="secondary" data-copy="login-code" hidden>Copy</button></div><details class="terminal-login"><summary>Terminal sign-in instructions</summary><label for="setup-platform">Your computer</label><select id="setup-platform"><option value="macos">macOS</option><option value="windows">Windows</option></select><div class="snippet"><code id="login-example"></code><button class="copy-icon secondary" type="button" data-copy="login-example" aria-label="Copy Codex login setup">Copy</button></div></details></section>
+              <section id="connect-test-card" class="panel"><h2><span class="step-number">3</span> Test connection</h2><p class="muted">Send one small request using this key’s account. Uses your account’s quota.</p><button id="test-connection" type="button" disabled>Test connection</button><p id="test-result" class="test-result" role="status">Run a test to verify your connection.</p><p id="setup-progress" class="muted" role="status"></p></section>
+            </div>
+            <div class="card-stack configuration-column">
+              <section class="panel"><div class="section-heading"><h2>VS Code configuration</h2><button class="copy-icon secondary" type="button" data-copy="vscode-example" aria-label="Copy VS Code configuration">Copy</button></div><p class="muted">Chat → Manage Models → Add Models → Custom Endpoint.</p><div class="form-field"><label for="setup-secret">API key secret</label><input id="setup-secret" type="password" autocomplete="off" placeholder="Paste your saved API key"><p class="muted">Used only to fill the configuration below. Kept in memory until you close this page.</p></div><code id="vscode-example" class="code-block" tabindex="0"></code></section>
+              <section class="panel"><div class="section-heading"><h2>Endpoint <span class="section-tag">POST</span></h2><button class="copy-icon secondary" type="button" data-copy="base-url" aria-label="Copy base URL">Copy endpoint</button></div><p class="muted">Chat completions</p><code id="base-url" class="endpoint-code"></code></section>
+              <section class="panel"><div class="section-heading"><h2>Quick test</h2><button class="copy-icon secondary" type="button" data-copy="curl-example" aria-label="Copy API test">Copy</button></div><code id="curl-example" class="code-block" tabindex="0"></code></section>
+              <details class="panel"><summary>Supported features & remote clients</summary><p id="capability-limits" class="muted">Text chat and streaming are supported. Client tool calls, VS Code Agent mode, and standard image uploads are not supported. Images require custom local-file input. Requests allow 100,000 prompt characters and a 1 MB JSON body.</p><p class="desktop-local-note muted">No tunnel is needed for local VS Code. The desktop app only supports local connections.</p><p class="muted">For SSH, WSL, or containers, localhost refers to that environment. Use an appropriately forwarded endpoint.</p><details class="advanced-tunnel"><summary>Advanced: restricted HTTPS tunnel</summary><p class="muted">Expose only authenticated /v1/ routes. Never expose the admin dashboard.</p><code id="tunnel-example" class="code-block"></code><button type="button" class="secondary" data-copy="tunnel-example" aria-label="Copy restricted tunnel configuration">Copy</button></details><code id="key-create-example" hidden></code></details>
+            </div>
           </div>
-          <div class="form-field workspace-field">
-            <label for="key-workspace-root">Workspace folder</label>
-            <input id="key-workspace-root" name="workspaceRoot" maxlength="4096" autocomplete="off" placeholder="Your project folder" aria-describedby="workspace-help workspace-error" required>
-            <p id="workspace-help" class="muted">Loading the allowed workspace…</p>
-            <p id="workspace-error" class="error-state" role="alert" hidden></p>
-          </div>
-          <div class="form-field compact-field">
-            <label for="key-rpm">Requests / minute</label>
-            <input id="key-rpm" name="requestsPerMinute" type="number" min="1" step="1" value="60" required>
-          </div>
-          <div class="form-field">
-            <label for="key-expiry">Expiry <span class="muted">(optional)</span></label>
-            <input id="key-expiry" name="expiresAt" type="datetime-local">
-          </div>
-          <button type="submit">Create key</button>
-        </form>
-      </section>
-
-      <section id="secret-panel" class="panel secret-panel" hidden aria-labelledby="secret-title">
-        <div class="panel-intro">
-          <p class="eyebrow">COPY NOW</p>
-          <h2 id="secret-title">New API key</h2>
-          <p class="muted">This is the only time the full secret is available.</p>
-        </div>
-        <div class="secret-row">
-          <code id="new-secret" tabindex="0"></code>
-          <button class="secondary" type="button" data-copy="new-secret">Copy</button>
-        </div>
-      </section>
-
-      <section class="keys-section" aria-labelledby="keys-title">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">ACCESS</p>
-            <h2 id="keys-title">Issued keys</h2>
-          </div>
-          <button id="refresh" class="secondary" type="button">Refresh</button>
-        </div>
-        <div class="key-filters"><label>Search keys<input id="key-search" type="search" placeholder="Name, ID or workspace"></label><label>Key status<select id="key-filter"><option value="all">All keys</option><option value="active">Active</option><option value="inactive">Deactivated</option><option value="expired">Expired</option></select></label></div>
-        <div id="keys" class="key-list" aria-live="polite" aria-busy="true"></div>
-      </section>
-
-      <section class="panel setup" aria-labelledby="setup-title">
-        <div class="panel-intro setup-intro">
-          <div>
-            <p class="eyebrow">GET STARTED</p>
-            <h2 id="setup-title">Connect your app</h2>
-          </div>
-          <p class="muted">Create a key above, sign in to Codex once, then connect VS Code.</p>
-        </div>
-        <div class="setup-choice">
-          <label for="setup-platform">Your computer</label>
-          <select id="setup-platform" name="setupPlatform">
-            <option value="macos">macOS</option>
-            <option value="windows">Windows</option>
-          </select>
-          <p id="setup-workspace-root" class="muted"></p>
-        </div>
-        <div class="wizard-controls">
-          <div><label for="setup-key">API key</label><select id="setup-key"><option value="">Create a key first</option></select></div>
-          <div><label for="setup-model">Model</label><select id="setup-model"></select></div>
-          <div><label for="setup-reasoning">Reasoning level</label><select id="setup-reasoning"></select><p class="muted">Applies to the test request. In VS Code, choose the level from its reasoning control.</p></div>
-          <div><label for="setup-secret">Key secret for client configuration</label><input id="setup-secret" type="password" autocomplete="off" placeholder="Paste your saved API key"><p class="muted">Kept only in this page's memory. Never saved to browser storage.</p></div>
-        </div>
-        <p id="setup-progress" class="setup-note" role="status">Create a key to begin.</p>
-        <div class="setup-note"><button id="login-codex" type="button" disabled>Sign in to Codex</button> <button id="login-cancel" type="button" class="secondary" hidden>Cancel sign-in</button><p id="login-status" role="status">Sign in here, or use the terminal command below.</p><a id="login-link" target="_blank" rel="noopener noreferrer" hidden>Open Codex sign-in</a> <code id="login-code"></code> <button id="login-copy" type="button" class="copy-icon" data-copy="login-code" hidden>Copy</button></div>
-        <div class="setup-note"><button id="test-connection" type="button" disabled>Test connection</button><p id="test-result" role="status">Runs a small model request using the selected key's Codex login. Uses your account's quota.</p></div>
-        <p class="setup-note">In VS Code, open Chat → Manage Models → Add Models → Custom Endpoint. Use the configuration below. Local VS Code can connect directly; no tunnel is needed. For WSL, SSH or containers, localhost refers to that environment, so use a reachable forwarded endpoint.</p>
-        <p id="capability-limits" class="setup-note">This gateway supports text chat and streaming. Client tool calls and standard image uploads are not supported; images require the gateway's custom local-file input. Requests allow up to 100,000 characters of combined prompt text and a 1 MB JSON body. Model context and output-token limits are not reported by this gateway. Use VS Code's text chat mode; its tool-based Agent mode is not supported.</p>
-        <div class="snippets">
-          <div class="snippet">
-            <span>1. Create your key</span>
-            <div><code id="key-create-example"></code><button class="copy-icon" type="button" data-copy="key-create-example" aria-label="Copy key creation guidance">Copy</button></div>
-          </div>
-          <div class="snippet">
-            <span>2. Sign in to Codex</span>
-            <div><code id="login-example"></code><button class="copy-icon" type="button" data-copy="login-example" aria-label="Copy Codex login setup">Copy</button></div>
-          </div>
-          <div class="snippet">
-            <span>3. VS Code endpoint</span>
-            <div><code id="base-url"></code><button class="copy-icon" type="button" data-copy="base-url" aria-label="Copy base URL">Copy</button></div>
-          </div>
-          <div class="snippet">
-            <span>4. VS Code configuration</span>
-            <div><code id="vscode-example"></code><button class="copy-icon" type="button" data-copy="vscode-example" aria-label="Copy VS Code configuration">Copy</button></div>
-          </div>
-          <div class="snippet">
-            <span>5. Test the connection</span>
-            <div><code id="curl-example"></code><button class="copy-icon" type="button" data-copy="curl-example" aria-label="Copy API test">Copy</button></div>
-          </div>
-          <details class="advanced-tunnel"><summary>Advanced: HTTPS access for remote clients</summary><p class="setup-note">Only needed when a client cannot reach your local server. Use a Cloudflare named tunnel with a hostname you control. Keep the gateway listening on loopback. The rules below expose authenticated /v1/ routes and return 404 for the dashboard and admin routes.</p><div class="snippet">
-            <span>Remote-only HTTPS tunnel</span>
-            <div><code id="tunnel-example"></code><button class="copy-icon" type="button" data-copy="tunnel-example" aria-label="Copy restricted tunnel configuration">Copy</button></div>
-          </div><p class="setup-note">Install cloudflared (macOS: brew install cloudflared; Windows: winget install --id Cloudflare.cloudflared), then run cloudflared tunnel login, cloudflared tunnel create codex-api, and cloudflared tunnel route dns codex-api api.example.com. Save this configuration as ~/.cloudflared/config.yml on macOS or %USERPROFILE%\\.cloudflared\\config.yml on Windows, replacing the tunnel ID, hostname and credentials path. Validate with cloudflared tunnel ingress validate. Start with cloudflared tunnel run codex-api; stop with Ctrl+C; restart with the same command. A named hostname stays the same. If you change the hostname, replace the VS Code endpoint with https://YOUR_HOST/v1/chat/completions. Confirm /, /admin/config and /healthz return 404 publicly, and /v1/models without a key is rejected.</p></details>
-        </div>
-      </section>
-      <section class="panel history" aria-labelledby="history-title"><div class="panel-intro"><h2 id="history-title">Recent requests</h2><p class="muted">Latest 100 requests, kept in server memory until restart. Prompts, responses and secrets are not stored here.</p></div><div class="table-scroll"><table><thead><tr><th>Time</th><th>Key</th><th>Model</th><th>Result</th><th>Duration</th><th>Tokens in / out</th></tr></thead><tbody id="request-history"></tbody></table></div><p id="history-status" class="setup-note" role="status">Loading recent requests…</p></section>
-      <p class="setup-note desktop-local-note">This desktop app connects directly to VS Code on this computer using localhost. No tunnel is needed; public tunnel access is not supported in the packaged app.</p>
-      <footer class="creator-credit">Created by Dhruv · <a href="https://thisisdhruv.in" target="_blank" rel="noopener noreferrer">thisisdhruv.in</a></footer>
+        </section>
+        <section id="view-requests" class="view-panel" data-view-panel="requests" aria-label="Requests" hidden>
+          <div class="request-toolbar panel"><label>Search requests<input id="history-search" type="search" placeholder="Search requests"></label><label>API key<select id="history-key-filter"><option value="all">All keys</option></select></label><label>Model<select id="history-model-filter"><option value="all">All models</option></select></label><label>Result<select id="history-result-filter"><option value="all">All results</option></select></label><button id="history-refresh" class="secondary" type="button">↻ Refresh</button></div>
+          <div class="request-grid"><section class="panel history"><div class="section-heading"><h2>Recent requests <span class="section-tag">Latest 100</span></h2><button id="history-export" class="text-button" type="button">Export CSV ↓</button></div><div class="table-scroll"><table><thead><tr><th>Time</th><th>Key</th><th>Model</th><th>Result</th><th>Duration</th><th>Tokens in / out</th></tr></thead><tbody id="request-history"></tbody></table></div><p id="history-status" class="muted" role="status">Loading requests…</p></section><aside id="request-detail-panel" class="panel" hidden><div class="section-heading"><h2 id="request-detail-title">Request details</h2><button id="request-detail-close" type="button" class="icon-button secondary" aria-label="Close request details">×</button></div><div id="request-detail-body"></div><p class="notice">Prompts, responses, and secrets are not recorded.</p><button id="request-detail-copy" type="button" class="secondary full-width">Copy diagnostic context</button></aside></div><p class="muted retention-note">Request metadata is kept in memory until the gateway restarts.</p>
+        </section>
+        <section id="view-diagnostics" class="view-panel" data-view-panel="diagnostics" aria-label="Diagnostics" hidden>
+          <div class="view-actions"><p class="muted">Local checks only. No model request or account quota is used.</p><button id="diagnostic-check" class="secondary" type="button">Prepare diagnostic report</button><button id="health-check" type="button">Run health check</button></div>
+          <div class="diagnostics-grid"><section class="panel"><div class="section-heading"><h2>System checks</h2><span class="section-tag">Local only</span></div><p class="muted">Workspace, local process, storage, and account status.</p><div id="health-results" role="status"><p class="empty">Checking local gateway…</p></div></section><div class="card-stack"><section class="panel recovery-card"><h2>Recommended next steps</h2><div id="recovery-panel"><p class="muted">Run checks to see relevant recovery actions.</p></div></section><section class="panel"><h2>Recent diagnostic runs</h2><div id="diagnostic-runs"><p class="muted">No checks run this session.</p></div></section></div></div>
+          <section class="panel technical-panel"><div class="section-heading"><h2>Technical details</h2><span class="section-tag">Read-only inspection</span></div><div id="diagnostic-technical"></div><pre id="diagnostic-report" hidden tabindex="0"></pre><button id="diagnostic-copy" class="secondary" type="button" hidden>Copy diagnostic report</button></section>
+        </section>
+        <section id="view-settings" class="view-panel" data-view-panel="settings" aria-label="Settings" hidden>
+          <div class="settings-grid"><section class="panel"><h2>Workspace & endpoint</h2><dl class="detail-list"><div><dt>Workspace</dt><dd id="settings-workspace">Loading…</dd></div><div><dt>Endpoint</dt><dd id="settings-endpoint"></dd></div></dl><p class="muted">Workspace and port are configured by the local gateway. In the desktop app, edit them here in Settings.</p><button id="open-native-settings" type="button" class="secondary">Open app settings</button></section><section class="panel"><h2>About Codex CLI API</h2><p class="muted">Your local AI gateway. API keys are scoped to your workspace and credentials stay on this computer.</p><p>Created by Dhruv · <a href="https://thisisdhruv.in" target="_blank" rel="noopener noreferrer">thisisdhruv.in</a></p></section></div>
+        </section>
+        <section id="view-onboarding" class="view-panel onboarding-view" data-view-panel="onboarding" aria-label="Guided setup" hidden>
+          <ol id="wizard-progress" class="progress-steps" aria-label="Setup progress"></ol>
+          <div class="wizard-heading"><span class="eyebrow">SET UP YOUR LOCAL GATEWAY</span><h2 id="wizard-title" tabindex="-1">Create a scoped API key</h2><p id="wizard-description" class="muted"></p></div>
+          <div class="wizard-layout"><div id="wizard-stage" class="card-stack"></div><aside class="panel wizard-help"><h3>Local by design</h3><p class="muted">Your workspace limits which files this key can access. Each key signs in with its own Codex account.</p><div class="notice">Save your API key when it appears. You’ll need it to connect VS Code.</div><p class="muted">Your completed setup steps are remembered. Your API secret stays in page memory only.</p></aside></div>
+          <div class="wizard-actions"><button id="wizard-back" type="button" class="secondary">← Back</button><button type="button" class="text-button" data-route="overview">Finish later</button><button id="wizard-next" type="button">Continue →</button></div>
+        </section>
+      </div>
+      <footer class="creator-credit">Created by Dhruv · <a href="https://thisisdhruv.in" target="_blank" rel="noopener noreferrer">thisisdhruv.in</a><span id="workspace-context" hidden></span></footer>
     </main>
-    <dialog id="delete-dialog" aria-labelledby="delete-title" aria-describedby="delete-description">
-      <form method="dialog">
-        <h2 id="delete-title">Delete API key permanently?</h2>
-        <p id="delete-description"></p>
-        <p>This cannot be undone. Your other API keys will not be affected.</p>
-        <div class="delete-dialog-actions">
-          <button value="cancel" autofocus>Cancel</button>
-          <button class="danger" value="delete">Delete permanently</button>
-        </div>
-      </form>
-    </dialog>
-    <script type="module" src="/admin/app.js"></script>
-  </body>
+  </div>
+  <dialog id="create-dialog" class="create-drawer" aria-labelledby="create-dialog-title"><div class="drawer-heading"><div><h2 id="create-dialog-title">Create an API key</h2><p class="muted">A scoped credential for your local project.</p></div><button id="close-create" class="icon-button secondary" type="button" aria-label="Close create key">×</button></div><div id="create-content"><section class="panel create-panel"><h3 id="create-title">Create an API key</h3><form id="create-form" class="create-form"><div class="form-field"><label for="key-name">Key name</label><input id="key-name" name="name" maxlength="100" autocomplete="off" placeholder="e.g. local-development" required></div><div class="form-field"><label for="key-workspace-root">Workspace folder</label><input id="key-workspace-root" name="workspaceRoot" maxlength="4096" autocomplete="off" placeholder="Your project folder" aria-describedby="workspace-help workspace-error" required><p id="workspace-help" class="muted">Loading workspace…</p><p id="workspace-error" class="error-state" role="alert" hidden></p></div><div class="form-row"><div class="form-field"><label for="key-rpm">Requests / minute</label><input id="key-rpm" name="requestsPerMinute" type="number" min="1" step="1" value="60" required></div><div class="form-field"><label for="key-expiry-mode">Expiry</label><select id="key-expiry-mode"><option value="never">No expiration</option><option value="custom">Choose date & time</option></select></div></div><div id="key-expiry-field" class="form-field" hidden><label for="key-expiry">Expires on</label><input id="key-expiry" name="expiresAt" type="datetime-local"></div><p class="notice">Your secret is shown once. Store it securely before closing this page.</p><button type="submit">Create key</button></form></section><section id="secret-panel" class="panel secret-panel" hidden aria-labelledby="secret-title"><h3 id="secret-title">Key created — save it now</h3><p class="muted">This is the only time the full secret is available.</p><div class="secret-row"><code id="new-secret" tabindex="0"></code><button class="secondary" type="button" data-copy="new-secret">Copy</button></div><button id="secret-continue" type="button">Continue to sign in →</button></section></div></dialog>
+  <dialog id="delete-dialog" aria-labelledby="delete-title" aria-describedby="delete-description"><form method="dialog"><h2 id="delete-title">Delete API key permanently?</h2><p id="delete-description"></p><p>This cannot be undone. Your other API keys will not be affected.</p><div class="delete-dialog-actions"><button class="secondary" value="cancel" autofocus>Cancel</button><button class="danger" value="delete">Delete permanently</button></div></form></dialog>
+  <script type="module" src="/admin/app.js"></script>
+</body>
 </html>

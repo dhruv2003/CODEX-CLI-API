@@ -2,34 +2,38 @@
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Codex CLI API</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="branding.css"></head>
 <body>
-  <header><div class="brand"><img class="app-logo" src="logo.png" alt="Codex CLI API logo"><div><h1>Codex CLI API</h1><p>Your local AI gateway · Created by Dhruv</p></div></div><div class="controls"><span id="status" role="status">Starting…</span><button id="settings-toggle" hidden>Settings</button><button id="restart" hidden>Restart</button><button id="stop" hidden>Stop gateway</button></div></header>
-  <div id="first-run-host"><main id="onboarding">
-    <section class="intro"><span class="eyebrow">WELCOME HOME</span><h2>One app. Your own workspace.</h2><p>Choose the folder your API keys can access. Then create a key and sign in with your own Codex account in the dashboard.</p><p class="muted">The runtime is included. No Node.js installation, terminal commands, or .env file needed.</p></section>
-    <form id="settings-form"><label for="workspace">Workspace folder</label><div class="folder"><input id="workspace" required placeholder="Choose your projects folder" autocomplete="off"><button id="choose" type="button">Choose folder</button></div><p class="hint">Select an existing folder. Each API key can be restricted to a project inside it. Keep credentials and application data outside this folder.</p><details><summary>Advanced settings</summary><label for="port">Local API port</label><input id="port" type="number" min="1024" max="65535" value="3081" required><p class="hint">Local connections only (127.0.0.1). If you change this port, update the endpoint in VS Code.</p><p class="hint">Application data: <span id="data-dir">Loading…</span></p></details><button class="primary" id="start" type="submit">Save & start gateway</button><p class="hint" id="restart-hint" hidden>Saving these settings restarts the gateway. Active requests will be interrupted.</p></form>
-  </main></div>
-  <dialog id="settings-drawer" aria-labelledby="settings-title">
-  <div class="drawer-heading"><div><h2 id="settings-title">Settings</h2><p class="hint">Codex CLI API · v0.1.2</p></div><button id="close-settings" type="button" aria-label="Close settings">Close</button></div>
-  <div id="settings-content"></div>
-  <section id="desktop-options" class="native-panel">
-    <h3>Desktop behaviour</h3>
-    <label><input id="launch-at-login" type="checkbox"> Launch at login</label>
-    <label><input id="keep-running" type="checkbox"> Keep running when window closes</label>
-    <button id="save-preferences" type="button">Save preferences</button>
-    <p class="hint">Closing quits by default. Use the tray to show, start, stop, or quit the app.</p>
-    <details id="native-health"><summary>Desktop health</summary><p id="health-workspace"></p><p id="health-runtime"></p><p id="health-port"></p></details>
-    <h3>Updates</h3><button id="check-update" type="button">Check for updates</button>
-    <button id="download-update" type="button" hidden>Download update</button>
-    <button id="install-update" type="button" hidden>Install & restart</button>
-    <p id="update-status" role="status"></p>
-    <details id="update-details" hidden><summary>Technical details</summary><p id="update-error-detail"></p></details>
-    <pre id="update-notes" hidden></pre>
-    <div id="update-confirmation" hidden><p>Install this update and restart the app? The gateway must be idle. Your settings, keys, and account data stay in place.</p><button id="confirm-install" type="button">Confirm install & restart</button><button id="cancel-install" type="button">Cancel</button></div>
-  </section>
-  <footer class="creator">Designed &amp; developed by <strong>Dhruv</strong> · <button id="creator-site" type="button">thisisdhruv.in</button></footer>
-  </dialog>
+  <aside id="native-sidebar" aria-label="Desktop navigation">
+    <div class="brand"><img class="app-logo" src="logo.png" alt="Codex CLI API logo"><div><strong>Codex CLI API</strong><span>Local AI gateway</span></div></div>
+    <nav aria-label="Setup navigation"><button disabled data-setup-nav>Overview</button><button disabled data-setup-nav>API Keys</button><button disabled data-setup-nav>Connect</button><button disabled data-setup-nav>Requests</button><button disabled data-setup-nav>Diagnostics</button></nav>
+    <div class="sidebar-bottom"><div class="theme-toggle" role="group" aria-label="Appearance"><span><span aria-hidden="true">◉</span> Theme</span><div><button id="native-theme-dark" type="button" aria-label="Dark theme" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 13.3A9 9 0 0 1 10.7 3.2a9 9 0 1 0 10.1 10.1Z"/></svg></button><button id="native-theme-light" type="button" aria-label="Light theme" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button></div></div><p id="sidebar-status" role="status">Setup required</p><button id="settings-toggle">Settings</button></div>
+  </aside>
+  <main id="first-run-host"><div id="onboarding">
+    <section class="intro"><span class="eyebrow">WELCOME HOME</span><h1>Set up your local gateway</h1><p>Choose your workspace, create your first key, sign in to Codex, and send a test request. You can return to any step later.</p></section>
+    <ol class="native-onboarding-progress" aria-label="Setup progress"><li class="active" aria-current="step"><span>1</span><div><strong>Workspace</strong><small>Current</small></div></li><li><span>2</span><div><strong>Create key</strong><small>Locked</small></div></li><li><span>3</span><div><strong>Sign in</strong><small>Pending</small></div></li><li><span>4</span><div><strong>Test connection</strong><small>Pending</small></div></li></ol>
+    <div class="onboarding-grid"><div id="workspace-host">
+      <form id="settings-form" class="native-panel">
+        <h2 id="workspace-title">1. Choose your workspace</h2><p id="workspace-intro" class="hint">Your workspace is the folder your API keys can access. Keep credentials and application data outside this folder.</p>
+        <label for="workspace">Workspace folder</label><div class="folder"><input id="workspace" required placeholder="Choose your projects folder" autocomplete="off"><button id="choose" type="button">Choose folder</button></div><p class="hint">Select an existing folder. Each key can be restricted to a project inside it.</p>
+        <details id="workspace-advanced"><summary>Advanced settings</summary><label for="port">Local API port</label><input id="port" type="number" min="1024" max="65535" value="3081" required><p class="hint">Local connections only. Update the endpoint in VS Code if you change this port.</p><p class="hint">Application data: <span id="data-dir">Loading…</span></p></details>
+        <button class="primary" id="start" type="submit">Save &amp; start gateway</button><p class="hint notice" id="restart-hint" hidden>Saving restarts the gateway. Active requests will be interrupted.</p>
+      </form>
+    </div><section class="native-panel next-steps"><h2>What happens next</h2><ol><li><strong>Workspace is saved locally</strong><p>Stored in native app settings, isolated from web requests.</p></li><li><strong>Create a scoped API key</strong><p>Restrict each project with its own key and usage limits.</p></li><li><strong>Connect VS Code &amp; verify</strong><p>Sign in with your Codex account and send a test request.</p></li></ol><p class="notice hint">The runtime is included. No Node.js installation, terminal commands, or .env file needed.</p></section></div>
+  </div></main>
+  <iframe id="dashboard" aria-label="API key manager and setup" hidden referrerpolicy="no-referrer"></iframe>
+  <main id="settings-panel" aria-labelledby="settings-title" hidden>
+    <div class="settings-heading"><div><h1 id="settings-title" tabindex="-1">Settings</h1><p class="hint">Configure the desktop gateway and local runtime</p></div><div class="heading-actions"><span class="version">v0.1.4</span><button id="close-settings" type="button">Back to overview</button></div></div>
+    <div class="settings-grid"><div class="settings-column">
+      <div id="settings-content"></div>
+      <section id="desktop-options" class="native-panel"><h2>Desktop behavior</h2><label class="preference"><span>Launch at login<small>Automatically start the gateway in the background when logging in</small></span><input id="launch-at-login" type="checkbox"></label><label class="preference"><span>Keep running when window closes<small>Gateway process continues serving local API requests in tray</small></span><input id="keep-running" type="checkbox"></label><button id="save-preferences" type="button">Save preferences</button><p class="hint">Use the tray to show, start, stop, or quit the app.</p></section>
+      <section class="native-panel"><h2>Updates</h2><p class="hint">Current version <strong>v0.1.4</strong></p><button id="check-update" type="button">Check for updates</button><button id="download-update" type="button" hidden>Download update</button><button id="install-update" type="button" hidden>Install &amp; restart</button><p id="update-status" role="status"></p><details id="update-details" hidden><summary>Technical details</summary><p id="update-error-detail"></p></details><pre id="update-notes" hidden></pre><div id="update-confirmation" hidden><p>Install this update and restart the app? The gateway must be idle. Your settings, keys, and account data stay in place.</p><button id="confirm-install" type="button">Confirm install &amp; restart</button><button id="cancel-install" type="button">Cancel</button></div></section>
+    </div><div class="settings-column">
+      <section id="native-health" class="native-panel"><h2>Runtime health</h2><p id="status" role="status">Starting…</p><p id="health-workspace"></p><p id="health-runtime"></p><p id="health-port"></p><div class="controls"><button id="open-diagnostics" type="button">Open Diagnostics →</button><button id="restart" type="button" hidden>Restart</button><button id="stop" type="button" hidden>Stop gateway</button></div></section>
+      <form id="defaults-form" class="native-panel"><h2>Connection defaults</h2><label for="default-model">Default model</label><select id="default-model" disabled><option value="">Waiting for model catalog</option></select><label for="default-reasoning">Default reasoning level</label><select id="default-reasoning" disabled><option value="">Model default</option></select><p class="hint">Used to prefill the Connect screen and test request. Saved only in this desktop app.</p><button id="save-defaults" type="submit" disabled>Save defaults</button><p id="defaults-status" class="hint" role="status"></p></form>
+      <section class="native-panel about"><h2>About</h2><p>Codex CLI API · v0.1.4</p><p class="creator">Created by Dhruv · <button id="creator-site" type="button">thisisdhruv.in</button></p><p class="notice hint">Your keys, accounts, and application settings stay on this computer.</p></section>
+    </div></div>
+  </main>
   <button id="update-notice" type="button" hidden>Update available — view details</button>
   <p id="error" role="alert" hidden></p>
-  <iframe id="dashboard" title="API key manager and setup" hidden referrerpolicy="no-referrer"></iframe>
   <script src="app.js"></script>
 </body>
 </html>

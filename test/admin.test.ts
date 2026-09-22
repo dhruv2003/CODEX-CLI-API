@@ -44,7 +44,7 @@ describe('local key admin', () => {
       expect(pageSource).toContain('id="vscode-example"')
       expect(pageSource).toContain('id="tunnel-example"')
       const appSource = await (await fetch(`${baseUrl}/admin/app.js`)).text()
-      expect(appSource).toContain('Promise.all([api(), requestJson("/admin/metrics")])')
+      expect(appSource).toContain('Promise.allSettled([api(), requestJson("/admin/metrics"), requestJson("/admin/setup"), requestJson("/admin/health")])')
       expect(appSource).toContain('unavailableMetrics')
       expect(appSource).toContain('aria-label')
       expect(appSource).toContain('method: "DELETE"')
