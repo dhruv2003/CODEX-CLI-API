@@ -7,6 +7,7 @@ import { loadDesktopConfig } from '../src/desktop.js'
 import { prepareConfig } from '../src/config.js'
 import { createApp } from '../src/server.js'
 import { codexChildEnv } from '../src/child-env.js'
+import { spawn } from 'node:child_process'
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'desktop-config-'))
@@ -17,6 +18,30 @@ async function fixture() {
 }
 
 describe('desktop runtime', () => {
+  it('reports the actual EADDRINUSE error when the configured port really is occupied', async () => {
+    const env = await fixture()
+    const occupied = createServer()
+    await new Promise<void>(resolve => occupied.listen(0, '127.0.0.1', resolve))
+    const address = occupied.address()
+    if (!address || typeof address === 'string') throw new Error('No port')
+    const child = spawn(process.execPath, ['--import=tsx/esm', resolve('src/desktop.ts')], {
+      env: { ...process.env, ...env, CODEX_DESKTOP_PORT: String(address.port), NODE_OPTIONS: '', NODE_PATH: '' },
+      stdio: ['pipe', 'ignore', 'pipe'],
+    })
+    let errors = ''
+    child.stderr.on('data', data => { errors += data })
+    const exited = new Promise<number | null>((resolve, reject) => { child.once('error', reject); child.once('exit', resolve) })
+    const timer = setTimeout(() => child.kill(), 8000)
+    try {
+      expect(await exited).toBe(1)
+      expect(errors).toContain('EADDRINUSE')
+      expect(errors).not.toContain(env.CODEX_DESKTOP_TOKEN)
+    } finally {
+      clearTimeout(timer)
+      child.kill()
+      await new Promise<void>(resolve => occupied.close(() => resolve()))
+    }
+  }, 10000)
   it('does not pass desktop capabilities or Node injection hooks to Codex children', () => {
     const env = { CODEX_DESKTOP_DATA_DIR: '/private/app', CODEX_DESKTOP_TOKEN: 'secret', NODE_OPTIONS: '--require bad', NODE_PATH: '/bad', PATH: '/bin', HOME: '/user' }
     expect(codexChildEnv(env)).toEqual({ PATH: '/bin', HOME: '/user' })

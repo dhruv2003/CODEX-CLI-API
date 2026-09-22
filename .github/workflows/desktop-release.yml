@@ -13,6 +13,10 @@ on:
         options: [artifacts, signed-draft]
         default: artifacts
         required: true
+      publish:
+        description: Publish after both signed builds and asset verification pass (requires reviewed docs/releases/TAG.md)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -154,3 +158,8 @@ jobs:
           node scripts/release-assets.mjs stage --tag "$RELEASE_TAG" --platform darwin-aarch64 --artifact "${images[0]}" --artifact "${archives[0]}" --artifact "${archives[0]}.sig" --repo "$GH_REPO"
       - name: Finalize combined updater manifest and checksums in draft only
         run: node scripts/release-assets.mjs finalize --tag "$RELEASE_TAG" --repo "$GH_REPO"
+      - name: Publish explicitly requested verified release
+        if: inputs.publish
+        run: |
+          test -f "docs/releases/$RELEASE_TAG.md"
+          gh release edit "$RELEASE_TAG" --repo "$GH_REPO" --notes-file "docs/releases/$RELEASE_TAG.md" --draft=false --latest

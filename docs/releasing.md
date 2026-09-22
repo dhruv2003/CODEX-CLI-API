@@ -1,6 +1,6 @@
 # Desktop releases on GitHub
 
-GitHub Actions builds macOS Apple Silicon and Windows x64 from the same version tag. GitHub Releases hosts installers, updater signatures, checksums and the combined update feed. Everything is staged in a **draft**; publication remains manual. No separate artifact server is needed.
+GitHub Actions builds macOS Apple Silicon and Windows x64 from the same version tag. GitHub Releases hosts installers, updater signatures, checksums and the combined update feed. Everything is staged in a **draft** by default. Explicitly enabling the workflow's `publish` input publishes only after both builds and signed-asset validation pass; reviewed notes must exist at `docs/releases/TAG.md`. No separate artifact server is needed.
 
 ## One-time setup
 
@@ -35,6 +35,8 @@ Open **Actions**, select the desktop installer workflow, then **Run workflow**. 
 
 - `artifacts`: build test installers, without creating a release or requiring updater signing credentials.
 - `signed-draft`: build updater-signed artifacts, stage both platforms in one draft release, and assemble its combined update manifest and checksums.
+
+Leave `publish` disabled for manual review. Enable it only when publication is already approved; it applies to `signed-draft` and uses the committed release notes. Installer links should be separate from the OTA support-file explanation, which must say users do not need to download those supporting files manually.
 
 Or use the GitHub CLI:
 

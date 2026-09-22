@@ -61,7 +61,11 @@ export async function startDesktop(env: NodeJS.ProcessEnv = process.env): Promis
   input.on('close', shutdown)
   process.once('SIGTERM', shutdown)
   process.once('SIGINT', shutdown)
-  server.once('error', () => { process.exitCode = 1; shutdown() })
+  server.once('error', error => {
+    console.error(JSON.stringify({ event: 'desktop_error', message: error.message }))
+    process.exitCode = 1
+    shutdown()
+  })
   server.listen(config.port, '127.0.0.1', () => {
     if (stopping) { server.close(); return }
     console.log(JSON.stringify({ event: 'desktop_ready', port: config.port }))

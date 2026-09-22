@@ -2,7 +2,7 @@
 
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
-use std::{fs, io::{BufRead, BufReader, Write}, path::{Path, PathBuf}, process::{Child, Command, Stdio}, sync::{mpsc, Mutex}, thread, time::{Duration, Instant}};
+use std::{fs, io::{BufRead, BufReader, Read, Write}, path::{Path, PathBuf}, process::{Child, Command, Stdio}, sync::{mpsc, Arc, Mutex}, thread, time::{Duration, Instant}};
 use tauri::Manager;
 mod health;
 mod updates;
@@ -74,6 +74,10 @@ impl Desktop {
     fn start(&mut self) -> Result<Status, String> {
         if self.status().running { return Ok(self.status()); }
         self.settings = validate_settings(&self.settings, &self.data_dir)?;
+        // Windows resource paths may use extended syntax that Node's ESM
+        // entry-point loader cannot handle. These are no-ops on other OSes.
+        self.runtime = dunce::simplified(&self.runtime).to_path_buf();
+        self.data_dir = dunce::simplified(&self.data_dir).to_path_buf();
         let node = self.runtime.join(if cfg!(windows) { "node.exe" } else { "node" });
         let codex = self.runtime.join("codex/bin").join(if cfg!(windows) { "codex.exe" } else { "codex" });
         let entry = self.runtime.join("gateway.mjs");
@@ -93,10 +97,25 @@ impl Desktop {
             .env("CODEX_DESKTOP_TOKEN", &token)
             .env("CODEX_DESKTOP_CODEX_COMMAND", codex)
             .env("CODEX_DESKTOP_PUBLIC_DIR", self.runtime.join("public"))
-            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null());
+            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
         #[cfg(unix)] { use std::os::unix::process::CommandExt; command.process_group(0); }
         #[cfg(windows)] { use std::os::windows::process::CommandExt; command.creation_flags(0x08000000); }
         let mut child = command.spawn().map_err(|e| format!("Could not launch the bundled runtime: {e}"))?;
+        let diagnostics = Arc::new(Mutex::new(Vec::<u8>::new()));
+        let capture = Arc::clone(&diagnostics);
+        let mut stderr = child.stderr.take().ok_or("Gateway error output is unavailable")?;
+        let stderr_reader = thread::spawn(move || {
+            // Drain continuously, retaining only a bounded tail in memory.
+            let mut chunk = [0u8; 2048];
+            while let Ok(count) = stderr.read(&mut chunk) {
+                if count == 0 { break; }
+                if let Ok(mut tail) = capture.lock() {
+                    tail.extend_from_slice(&chunk[..count]);
+                    let excess = tail.len().saturating_sub(8192);
+                    tail.drain(..excess);
+                }
+            }
+        });
         let output = child.stdout.take().ok_or("Gateway output is unavailable")?;
         let (tx, rx) = mpsc::channel();
         thread::spawn(move || {
@@ -114,8 +133,18 @@ impl Desktop {
                 Ok(self.status())
             }
             _ => {
+                let exit = child.try_wait().ok().flatten();
                 terminate_tree(&mut child);
-                Err(format!("Gateway could not start on port {}. The port may be in use; choose another port in Settings.", self.settings.port))
+                let _ = stderr_reader.join();
+                let detail = diagnostics.lock().map(|tail| String::from_utf8_lossy(&tail).trim().replace(&token, "[REDACTED]")).unwrap_or_default();
+                let reason = exit.map(|status| format!("Runtime exited ({status}).")).unwrap_or_else(|| "Runtime stopped or did not report readiness within 20 seconds.".into());
+                let hint = if detail.contains("EADDRINUSE") { "The configured port is already in use. Choose another port in Settings." }
+                    else if detail.contains("EISDIR") { "The bundled runtime could not load its startup file. Update or reinstall the app; changing ports will not fix this error." }
+                    else { "Check the runtime error below, or update/reinstall the app if its bundled files are damaged." };
+                let message = format!("Gateway could not start on port {}. {reason} {hint}{}", self.settings.port,
+                    if detail.is_empty() { "\nNo runtime error output was captured.".into() } else { format!("\nRuntime error: {detail}") });
+                self.error = Some(message.clone());
+                Err(message)
             }
         }
     }
@@ -272,6 +301,71 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn startup_fixture(script: &str) -> (PathBuf, Desktop) {
+        let root = std::env::temp_dir().join(format!("codex startup spaces-{}", rand::random::<u64>()));
+        let runtime = root.join("bundled runtime");
+        let data = root.join("private data");
+        let workspace = root.join("workspace");
+        for path in [&runtime.join("codex/bin"), &data, &workspace] { fs::create_dir_all(path).unwrap(); }
+        let node_name = if cfg!(windows) { "node.exe" } else { "node" };
+        let bundled = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../desktop-runtime").join(node_name);
+        #[cfg(unix)] std::os::unix::fs::symlink(&bundled, runtime.join(node_name)).unwrap();
+        #[cfg(windows)] fs::copy(&bundled, runtime.join(node_name)).unwrap();
+        fs::write(runtime.join("codex/bin").join(if cfg!(windows) { "codex.exe" } else { "codex" }), "fixture").unwrap();
+        fs::write(runtime.join("gateway.mjs"), script).unwrap();
+        let desktop = Desktop {
+            settings: Settings { workspace_root: workspace.to_string_lossy().into_owned(), port: 3081, launch_at_login: false, keep_running_on_close: false },
+            data_dir: fs::canonicalize(data).unwrap(), runtime: fs::canonicalize(runtime).unwrap(), gateway: None, error: None,
+        };
+        (root, desktop)
+    }
+    #[test]
+    fn startup_preserves_real_error_without_leaking_token_or_claiming_port_conflict() {
+        let (root, mut desktop) = startup_fixture(r#"
+            process.stderr.write('x'.repeat(100000));
+            process.stderr.write('\nEISDIR: illegal operation on a directory\ndesktop-token=' + process.env.CODEX_DESKTOP_TOKEN + '\n');
+            process.exitCode = 1;
+        "#);
+        let error = desktop.start().err().expect("fixture must fail startup");
+        fs::remove_dir_all(root).unwrap();
+        assert!(error.contains("EISDIR"), "actual runtime error was lost: {error}");
+        assert!(error.contains("desktop-token=[REDACTED]"), "startup diagnostics must redact the desktop capability");
+        assert!(!error.contains("port may be in use"));
+        assert!(error.len() < 10000, "diagnostic capture must be bounded");
+    }
+    #[test]
+    fn canonical_runtime_paths_are_node_compatible_and_gateway_can_restart() {
+        let (root, mut desktop) = startup_fixture(r#"
+            const paths = [process.argv[1], process.env.CODEX_DESKTOP_DATA_DIR, process.env.CODEX_DESKTOP_CODEX_COMMAND, process.env.CODEX_DESKTOP_PUBLIC_DIR];
+            if (paths.some(path => path.startsWith('\\\\?\\'))) throw new Error('Extended path reached Node');
+            console.log(JSON.stringify({event:'desktop_ready', port:Number(process.env.CODEX_DESKTOP_PORT)}));
+            process.stdin.on('data', () => process.exit(0));
+        "#);
+        let first = desktop.start().map(|status| status.running);
+        desktop.stop();
+        let second = desktop.start().map(|status| status.running);
+        desktop.stop();
+        fs::remove_dir_all(root).unwrap();
+        assert_eq!(first, Ok(true));
+        assert_eq!(second, Ok(true));
+    }
+    #[test]
+    fn bundled_gateway_reaches_ready_from_canonical_runtime() {
+        let root = std::env::temp_dir().join(format!("codex bundled startup-{}", rand::random::<u64>()));
+        let data = root.join("private data"); let workspace = root.join("workspace");
+        fs::create_dir_all(&data).unwrap(); fs::create_dir_all(&workspace).unwrap();
+        let reserved = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = reserved.local_addr().unwrap().port(); drop(reserved);
+        let runtime = fs::canonicalize(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../desktop-runtime")).unwrap();
+        let mut desktop = Desktop {
+            settings: Settings { workspace_root: workspace.to_string_lossy().into_owned(), port, launch_at_login: false, keep_running_on_close: false },
+            data_dir: fs::canonicalize(data).unwrap(), runtime, gateway: None, error: None,
+        };
+        let result = desktop.start().map(|status| status.running);
+        desktop.stop();
+        fs::remove_dir_all(root).unwrap();
+        assert_eq!(result, Ok(true));
+    }
     #[test]
     fn old_settings_default_to_no_background_behavior() {
         let settings: Settings = serde_json::from_str(r#"{"workspaceRoot":"/tmp","port":3081}"#).unwrap();

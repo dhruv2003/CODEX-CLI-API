@@ -261,9 +261,9 @@ window.addEventListener("message", (event) => {
 });
 void action(async () => {
   if (!window.__TAURI__?.core?.invoke) throw new Error("Open this screen from the Codex CLI API desktop app.");
+  void checkUpdate();
   const next = await invoke("desktop_status");
   initialSetup = !next.settings.workspaceRoot;
   render(next);
   if (!state.running && state.settings.workspaceRoot && !state.error) render(await invoke("start_gateway"));
-  void checkUpdate();
 });

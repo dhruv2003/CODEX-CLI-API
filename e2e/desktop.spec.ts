@@ -32,6 +32,7 @@ test.beforeEach(async ({ page }) => {
     let running = false
     win.__TAURI__ = { core: { invoke: async (command: string, args: any) => {
       win.calls.push(command)
+      if (command === 'desktop_status' && win.savedWorkspace) settings.workspaceRoot = win.savedWorkspace
       if (command === 'choose_workspace') return '/Users/test/Projects'
       if (command === 'check_for_update') return win.updateFixture || { configured: false, version: null, message: 'Automatic updates are not configured for this build.' }
       if (command === 'download_update') { if (win.badSignature) throw new Error('Update signature verification failed'); return }
@@ -125,6 +126,41 @@ test('desktop launch error stays actionable without an empty dashboard', async (
   await expect(page.getByRole('alert')).toContainText('Port is already in use')
   await expect(page.locator('#dashboard')).toBeHidden()
   await expect(page.getByRole('button', { name: 'Save & start gateway' })).toBeEnabled()
+})
+
+test('automatic update check survives saved-workspace gateway startup failure', async ({ page }) => {
+  await page.addInitScript(() => {
+    const win = window as any
+    win.savedWorkspace = '/Users/test/Projects'
+    win.failStart = true
+    win.updateFixture = { configured: true, version: '1.4.1', message: 'Update available' }
+  })
+  await page.goto('http://desktop.test')
+  await expect(page.getByRole('alert')).toContainText('Port is already in use')
+  await expect(page.locator('#dashboard')).toBeHidden()
+  await expect(page.locator('#update-notice')).toBeVisible()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await expect(page.locator('#settings-panel')).toBeVisible()
+  await expect(page.locator('#update-status')).toContainText('1.4.1')
+  await expect(page.getByRole('button', { name: 'Download update' })).toBeEnabled()
+})
+
+test('native Settings can manually check for updates after gateway startup failure', async ({ page }) => {
+  await page.addInitScript(() => {
+    const win = window as any
+    win.savedWorkspace = '/Users/test/Projects'
+    win.failStart = true
+  })
+  await page.goto('http://desktop.test')
+  await expect(page.getByRole('alert')).toContainText('Port is already in use')
+  await expect(page.locator('#dashboard')).toBeHidden()
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await page.evaluate(() => {
+    (window as any).updateFixture = { configured: true, version: '1.4.1', message: 'Update available' }
+  })
+  await page.getByRole('button', { name: 'Check for updates' }).click()
+  await expect(page.locator('#update-status')).toContainText('1.4.1')
+  await expect(page.getByRole('button', { name: 'Download update' })).toBeEnabled()
 })
 
 test('desktop shows stopped health and safe preference defaults', async ({ page }) => {
