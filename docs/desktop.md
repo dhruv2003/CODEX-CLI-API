@@ -4,7 +4,7 @@ The desktop build reuses the web dashboard and TypeScript gateway. Rust handles 
 
 ## Recipient setup
 
-1. Install the build for your OS and CPU. Open **Codex CLI API**.
+1. Install the build for your OS and CPU. Open **Sidecar**.
 2. Choose an existing workspace folder. The app rejects folders that overlap its private application-data directory.
 3. Click **Save & start gateway**. Create a project-scoped API key in the embedded dashboard.
 4. Click **Login to Codex**, copy the displayed device code, and open the sign-in page. Sign in with your own eligible account; the app does not include the developer's account.
@@ -65,7 +65,7 @@ npm ci
 npm run desktop:build -- --bundles deb,appimage
 ```
 
-The macOS command creates `release/Codex CLI API.app` and `release/Codex CLI API_0.1.0_arm64.dmg` (or `_x64.dmg` on Intel). Opening the DMG shows the app, an Applications shortcut, and `README.txt` with Dhruv's creator details and https://thisisdhruv.in. The build script mounts the image read-only to verify these contents. Other Tauri artifacts appear in `src-tauri/target/release/bundle/`. Keep installers, not the entire repository or `node_modules`. The preparation script packages an explicit allowlist: gateway bundle, dashboard assets, portable Node, Codex vendor tree, and dependency licenses. `desktop-runtime/`, `.desktop-cache/`, build output, and release artifacts are ignored by Git.
+The macOS command creates `release/Sidecar.app` and `release/Sidecar_<version>_<arch>.dmg`. Opening the DMG shows the app, an Applications shortcut, and `README.txt` with Sidecar and creator details. The build script mounts the image read-only to verify these contents. Other Tauri artifacts appear in `src-tauri/target/release/bundle/`. Keep installers, not the entire repository or `node_modules`. The preparation script packages an explicit allowlist: gateway bundle, dashboard assets, portable Node, Codex vendor tree, and dependency licenses. `desktop-runtime/`, `.desktop-cache/`, build output, and release artifacts are ignored by Git.
 
 ## Release checklist
 

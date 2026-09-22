@@ -416,7 +416,7 @@ function renderSetup() {
   $("login-example").textContent = desktopToken ? "Choose Sign in to Codex. The desktop app includes Codex and manages your sign-in; no terminal setup is needed." : windows
     ? "$env:CODEX_HOME=" + quote(home) + "\nNew-Item -ItemType Directory -Force $env:CODEX_HOME | Out-Null\ncodex login"
     : "export CODEX_HOME=" + quote(home) + '\nmkdir -p "$CODEX_HOME"\ncodex login';
-  $("vscode-example").textContent = JSON.stringify([{name:"Local Codex CLI API", vendor:"customendpoint", apiKey:secret, apiType:"chat-completions", models:[{id:modelId,name:modelId,url:baseUrl+"/chat/completions",toolCalling:false,vision:false,thinking:true,supportsReasoningEffort:setupData.models.find((entry) => entry.id === model)?.efforts || [],reasoningEffortFormat:"chat-completions"}]}], null, 2);
+  $("vscode-example").textContent = JSON.stringify([{name:"Sidecar Local Gateway", vendor:"customendpoint", apiKey:secret, apiType:"chat-completions", models:[{id:modelId,name:modelId,url:baseUrl+"/chat/completions",toolCalling:false,vision:false,thinking:true,supportsReasoningEffort:setupData.models.find((entry) => entry.id === model)?.efforts || [],reasoningEffortFormat:"chat-completions"}]}], null, 2);
   const payload = JSON.stringify({model:modelId,messages:[{role:"user",content:"Say hello"}],stream:false,...(effort ? {reasoning_effort:effort} : {})});
   $("browser-origins-status").textContent = key?.allowedOrigins?.length
     ? "Allowed browser origins: " + key.allowedOrigins.join(", ")

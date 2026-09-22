@@ -1068,7 +1068,7 @@ if (!process.env.CODEX_DESKTOP_DATA_DIR && process.argv[1] && import.meta.url ==
   process.on('SIGTERM', shutdown)
   if (process.platform === 'win32') process.on('SIGBREAK', shutdown)
   server.listen(config.port, config.host, () => {
-    console.log(`Codex CLI API listening on http://${config.host}:${config.port}`)
+    console.log(`Sidecar listening on http://${config.host}:${config.port}`)
     console.log(`Workspace root: ${config.workspaceRoot}`)
   })
 }

@@ -13,10 +13,10 @@ const config = JSON.parse(await readFile(join(root, 'src-tauri', 'tauri.conf.jso
 if (!/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(config.version)) throw new Error('Unsafe application version.');
 const release = join(root, 'release');
 const cache = join(root, '.desktop-cache');
-const appName = 'Codex CLI API.app';
+const appName = 'Sidecar.app';
 const builtApp = join(root, 'src-tauri', 'target', 'release', 'bundle', 'macos', appName);
 const finalApp = join(release, appName);
-const dmg = join(release, `Codex CLI API_${config.version}_${process.arch}.dmg`);
+const dmg = join(release, `Sidecar_${config.version}_${process.arch}.dmg`);
 const env = { ...process.env, PATH: [join(homedir(), '.cargo', 'bin'), process.env.PATH || ''].join(delimiter) };
 function run(command, args, options = {}) {
   return execFileSync(command, args, { cwd: root, env, stdio: 'inherit', ...options });
@@ -55,7 +55,7 @@ try {
   run('/usr/bin/ditto', [finalApp, join(stage, appName)]);
   await copyFile(join(root, 'packaging', 'README.txt'), join(stage, 'README.txt'));
   await symlink('/Applications', join(stage, 'Applications'));
-  run('/usr/bin/hdiutil', ['create', '-volname', 'Codex CLI API', '-srcfolder', stage, '-ov', '-format', 'UDZO', dmg]);
+  run('/usr/bin/hdiutil', ['create', '-volname', 'Sidecar', '-srcfolder', stage, '-ov', '-format', 'UDZO', dmg]);
   run('/usr/bin/hdiutil', ['attach', dmg, '-readonly', '-nobrowse', '-mountpoint', mount]);
   attached = true;
   if (!(await lstat(join(mount, appName))).isDirectory()) throw new Error('DMG verification failed: app missing.');

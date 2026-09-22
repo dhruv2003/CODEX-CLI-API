@@ -1,4 +1,6 @@
-# Branding
+# Sidecar Branding
+
+Product: **Sidecar** — https://sidecar.co.in
 
 Creator: **Dhruv** — https://thisisdhruv.in
 

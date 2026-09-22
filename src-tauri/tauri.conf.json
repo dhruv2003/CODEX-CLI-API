@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Codex CLI API",
-  "version": "1.4.2",
+  "productName": "Sidecar",
+  "version": "1.4.3",
   "identifier": "com.codexcliapi.desktop",
   "plugins": {
     "updater": {
@@ -12,7 +12,7 @@
   "build": { "frontendDist": "../desktop", "beforeDevCommand": "npm run desktop:prepare", "beforeBuildCommand": "npm run desktop:prepare" },
   "app": {
     "withGlobalTauri": true,
-    "windows": [{ "label": "main", "title": "Codex CLI API", "width": 1280, "height": 900, "minWidth": 760, "minHeight": 600 }],
+    "windows": [{ "label": "main", "title": "Sidecar", "width": 1280, "height": 900, "minWidth": 760, "minHeight": 600 }],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; frame-src http://127.0.0.1:*; object-src 'none'; base-uri 'self'"
     }
@@ -21,7 +21,7 @@
     "active": true,
     "publisher": "Dhruv Bhagatkar",
     "copyright": "Created by Dhruv Bhagatkar · https://thisisdhruv.in",
-    "homepage": "https://thisisdhruv.in",
+    "homepage": "https://sidecar.co.in",
     "targets": "all",
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
     "resources": { "../desktop-runtime/": "runtime/" },

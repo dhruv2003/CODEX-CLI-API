@@ -64,9 +64,9 @@ Use the real password if encrypted. Do not reuse a stale archive because its fil
 
 ```sh
 node scripts/release-assets.mjs stage --tag v0.2.2 --platform darwin-aarch64 \
-  --artifact 'release/Codex CLI API_0.2.2_arm64.dmg' \
-  --artifact 'src-tauri/target/release/bundle/macos/Codex CLI API.app.tar.gz' \
-  --artifact 'src-tauri/target/release/bundle/macos/Codex CLI API.app.tar.gz.sig'
+  --artifact 'release/Sidecar_0.2.2_arm64.dmg' \
+  --artifact 'src-tauri/target/release/bundle/macos/Sidecar.app.tar.gz' \
+  --artifact 'src-tauri/target/release/bundle/macos/Sidecar.app.tar.gz.sig'
 ```
 
 Staging validates updater signatures against the committed public key and records artifact hashes plus the selected commit. This provenance records what was staged; it is not independent proof that an arbitrary pre-existing binary was built from that source. Always rebuild from the tag.

@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Codex CLI API</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="branding.css"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sidecar</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="branding.css"></head>
 <body>
   <aside id="native-sidebar" aria-label="Desktop navigation">
-    <div class="brand"><img class="app-logo" src="logo.png" alt="Codex CLI API logo"><div><strong>Codex CLI API</strong><span>Local AI gateway</span></div></div>
+    <div class="brand"><img class="app-logo" src="logo.png" alt="Sidecar logo"><div><strong>Sidecar</strong><span>Local AI companion</span></div></div>
     <nav aria-label="Setup navigation"><button disabled data-setup-nav>Overview</button><button disabled data-setup-nav>API Keys</button><button disabled data-setup-nav>Connect</button><button disabled data-setup-nav>Requests</button><button disabled data-setup-nav>Diagnostics</button></nav>
     <div class="sidebar-bottom"><div class="theme-toggle" role="group" aria-label="Appearance"><span><span aria-hidden="true">◉</span> Theme</span><div><button id="native-theme-dark" type="button" aria-label="Dark theme" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 13.3A9 9 0 0 1 10.7 3.2a9 9 0 1 0 10.1 10.1Z"/></svg></button><button id="native-theme-light" type="button" aria-label="Light theme" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button></div></div><p id="sidebar-status" role="status">Setup required</p><button id="settings-toggle">Settings</button></div>
   </aside>
@@ -29,7 +29,7 @@
     </div><div class="settings-column">
       <section id="native-health" class="native-panel"><h2>Runtime health</h2><p id="status" role="status">Starting…</p><p id="health-workspace"></p><p id="health-runtime"></p><p id="health-port"></p><div class="controls"><button id="open-diagnostics" type="button">Open Diagnostics →</button><button id="restart" type="button" hidden>Restart</button><button id="stop" type="button" hidden>Stop gateway</button></div></section>
       <form id="defaults-form" class="native-panel"><h2>Connection defaults</h2><label for="default-model">Default model</label><select id="default-model" disabled><option value="">Waiting for model catalog</option></select><label for="default-reasoning">Default reasoning level</label><select id="default-reasoning" disabled><option value="">Model default</option></select><p class="hint">Used to prefill the Connect screen and test request. Saved only in this desktop app.</p><button id="save-defaults" type="submit" disabled>Save defaults</button><p id="defaults-status" class="hint" role="status"></p></form>
-      <section class="native-panel about"><h2>About</h2><p>Codex CLI API · <span data-app-version>Version unavailable</span></p><p class="creator">Created by Dhruv · <button id="creator-site" type="button">thisisdhruv.in</button></p><p class="notice hint">Your keys, accounts, and application settings stay on this computer.</p></section>
+      <section class="native-panel about"><h2>About</h2><p>Sidecar · <span data-app-version>Version unavailable</span></p><p><a href="https://sidecar.co.in" target="_blank" rel="noopener noreferrer">sidecar.co.in</a></p><p class="creator">Created by Dhruv · <button id="creator-site" type="button">thisisdhruv.in</button></p><p class="notice hint">Your keys, accounts, and application settings stay on this computer.</p></section>
     </div></div>
   </main>
   <button id="update-notice" type="button" hidden>Update available — view details</button>

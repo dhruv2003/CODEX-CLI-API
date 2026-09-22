@@ -286,7 +286,7 @@ fn main() {
             }
         }
     }).invoke_handler(tauri::generate_handler![desktop_status, save_settings, save_preferences, start_gateway, stop_gateway, choose_workspace, open_codex_login, open_creator_website, updates::check_for_update, updates::download_update, updates::install_update])
-      .build(tauri::generate_context!()).expect("Unable to initialize Codex CLI API desktop");
+      .build(tauri::generate_context!()).expect("Unable to initialize Sidecar desktop");
     app.run(|app, event| {
         if let tauri::RunEvent::ExitRequested { api, .. } = &event {
             if updates::installing(app) { api.prevent_exit(); return; }

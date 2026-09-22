@@ -7,7 +7,7 @@ pub fn setup(app: &tauri::App) -> tauri::Result<()> {
     let stop = MenuItem::with_id(app, "stop", "Stop gateway", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &start, &stop, &quit])?;
-    let mut builder = TrayIconBuilder::new().menu(&menu).tooltip("Codex CLI API");
+    let mut builder = TrayIconBuilder::new().menu(&menu).tooltip("Sidecar");
     if let Some(icon) = app.default_window_icon() { builder = builder.icon(icon.clone()); }
     builder.on_menu_event(|app, event| {
         if crate::updates::installing(app) && event.id.as_ref() != "show" { return; }

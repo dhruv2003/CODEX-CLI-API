@@ -29,7 +29,7 @@ export function validateMacMetadata(version, identifier, bundledVersion) {
 
 function inspectMacArchive(path, version) {
   const members = run('tar', ['-tzf', path]).split('\n');
-  const plistName = members.filter(name => /^(?:\.\/)?Codex CLI API\.app\/Contents\/Info\.plist$/.test(name));
+  const plistName = members.filter(name => /^(?:\.\/)?Sidecar\.app\/Contents\/Info\.plist$/.test(name));
   if (plistName.length !== 1) throw new Error('Mac archive must contain exactly one expected app Info.plist.');
   const plist = execFileSync('tar', ['-xOzf', path, plistName[0]], { maxBuffer: 1024 * 1024 });
   // plistlib handles both XML and binary plists without shell interpolation or extraction.
@@ -69,7 +69,7 @@ export function verifySignature(data, signature, pubkey) {
 export function combinedMetadata({ tag, version, commit, repo, files, pubkey }) {
   validateRelease(tag, [version], commit, commit);
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) throw new Error('Invalid GitHub repository.');
-  const latest = { version, notes: `Codex CLI API ${version}`, platforms: {} };
+  const latest = { version, notes: `Sidecar ${version}`, platforms: {} };
   const required = [];
   for (const platform of platforms) {
     const names = assetNames(version, platform);

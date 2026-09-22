@@ -1,9 +1,9 @@
-# Codex CLI API
+# Sidecar
 
 Local OpenAI-compatible HTTP access to an authenticated Codex CLI. Each API key
 is bound to one workspace and generation results stream over SSE.
 
-Created by **Dhruv** — [thisisdhruv.in](https://thisisdhruv.in).
+Sidecar is created by **Dhruv** — [sidecar.co.in](https://sidecar.co.in). Learn more about the creator at [thisisdhruv.in](https://thisisdhruv.in).
 
 ## Desktop app
 
@@ -166,7 +166,7 @@ No tunnel, public hostname, or public HTTPS endpoint is needed. VS Code's
 ```json
 [
   {
-    "name": "Local Codex CLI API",
+    "name": "Sidecar Local Gateway",
     "vendor": "customendpoint",
     "apiKey": "${input:codexCliApiKey}",
     "apiType": "chat-completions",

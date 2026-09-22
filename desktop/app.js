@@ -270,7 +270,7 @@ window.addEventListener("message", (event) => {
   }
 });
 void action(async () => {
-  if (!window.__TAURI__?.core?.invoke) throw new Error("Open this screen from the Codex CLI API desktop app.");
+  if (!window.__TAURI__?.core?.invoke) throw new Error("Open this screen from the Sidecar desktop app.");
   void checkUpdate();
   const next = await invoke("desktop_status");
   initialSetup = !next.settings.workspaceRoot;

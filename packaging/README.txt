@@ -1,13 +1,14 @@
-CODEX CLI API
+SIDECAR
 Desktop app - macOS
 
 Created by Dhruv Bhagatkar
-Creator and developer of Codex CLI API
-Website: https://thisisdhruv.in
+Creator and developer of Sidecar
+Website: https://sidecar.co.in
+Created by Dhruv Bhagatkar: https://thisisdhruv.in
 
 INSTALL
-1. Drag Codex CLI API.app to the Applications shortcut beside this file.
-2. Open Codex CLI API from Applications, then eject this disk image.
+1. Drag Sidecar.app to the Applications shortcut beside this file.
+2. Open Sidecar from Applications, then eject this disk image.
 3. Select an existing workspace folder and save your settings in the app.
 4. Start the gateway, create an API key, and follow the in-app Codex sign-in
    instructions. Each user signs in with their own account.

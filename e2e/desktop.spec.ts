@@ -55,14 +55,14 @@ test('settings and About show the installed app version', async ({ page }) => {
   await page.goto('http://desktop.test')
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await expect(page.locator('.settings-heading .version')).toHaveText('v9.8.7')
-  await expect(page.locator('.about')).toContainText('Codex CLI API · v9.8.7')
+  await expect(page.locator('.about')).toContainText('Sidecar · v9.8.7')
   await expect(page.getByText('Current version', { exact: false })).toHaveText('Current version v9.8.7')
 })
 
 test('desktop first run saves native settings and starts, restarts and stops gateway', async ({ page }) => {
   await page.goto('http://desktop.test')
   await expect(page.locator('#status')).toHaveText('Gateway stopped')
-  await expect(page.locator('#native-sidebar .brand')).toHaveText('Codex CLI APILocal AI gateway')
+  await expect(page.locator('#native-sidebar .brand')).toHaveText('SidecarLocal AI companion')
   await expect(page.getByRole('group',{name:'Appearance'}).getByRole('button').first()).toHaveAccessibleName('Dark theme')
   await page.getByRole('button', { name: 'Choose folder' }).click()
   await expect(page.locator('#workspace')).toHaveValue('/Users/test/Projects')
