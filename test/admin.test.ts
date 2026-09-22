@@ -94,6 +94,7 @@ describe('local key admin', () => {
         active: true,
         expiresAt: null,
         requestsPerMinute: 60,
+        allowedOrigins: [],
         requestCount: 0,
         inputTokens: 0,
         outputTokens: 0,

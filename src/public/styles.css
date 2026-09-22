@@ -23,13 +23,13 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { margin: 0; min-width: 320px; background: var(--cream); color: var(--ink); line-height: 1.5; }
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { min-height: 34px; padding: 7px 12px; border: 1px solid var(--cobalt); border-radius: 5px; background: var(--cobalt); color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .12s, border-color .12s; }
 button:hover { background: var(--cobalt-hover); border-color: var(--cobalt-hover); }
 :root[data-theme="dark"] button:not(.secondary):not(.nav-item):not(.text-button):not(.theme-button):not(.danger) { color: #101730; }
 button:disabled { opacity: .5; cursor: not-allowed; }
 #login-codex.login-complete { background: var(--surface-muted); border-color: var(--line); color: var(--muted); opacity: 1; cursor: default; }
-button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible, a:focus-visible, code:focus-visible, tr:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 3px; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, a:focus-visible, code:focus-visible, tr:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 3px; }
 h1:focus, #wizard-title:focus { outline: none; }
 a { color: var(--cobalt); }
 button.secondary, .secondary { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
@@ -111,9 +111,10 @@ p { margin-bottom: 12px; }
 .key-detail-panel, #request-detail-panel { position: sticky; top: 98px; }
 .form-field { min-width: 0; margin-bottom: 16px; }
 label { display: block; margin-bottom: 6px; font-size: 11px; color: var(--ink); font-weight: 500; }
-input, select { display: block; width: 100%; min-width: 0; height: 37px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--surface); color: var(--ink); font-size: 12px; }
+input, select, textarea { display: block; width: 100%; min-width: 0; height: 37px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--surface); color: var(--ink); font-size: 12px; }
+textarea { height: auto; resize: vertical; }
 select { appearance: none; -webkit-appearance: none; padding-right: 29px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='m2 2 4 4 4-4' fill='none' stroke='%23858b96' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 10px 7px; }
-input::placeholder { color: var(--faint); }
+input::placeholder, textarea::placeholder { color: var(--faint); }
 input[type="datetime-local"] { min-width: 0; width: 100%; min-height: 39px; }
 .form-field .muted { margin: 6px 0 0; font-size: 10px; overflow-wrap: anywhere; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -131,6 +132,7 @@ input[type="datetime-local"] { min-width: 0; width: 100%; min-height: 39px; }
 .key-policy summary { font-size: 11px; color: var(--muted); }
 .policy-form { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-top: 12px; }
 .policy-form .form-field { flex: 1 1 170px; margin: 0; }
+.policy-form .origins-field, .policy-form .policy-error { flex-basis: 100%; }
 .policy-form button { font-size: 11px; }
 .pill, .result-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--success-soft); color: var(--success); white-space: nowrap; }
 .pill.inactive { color: var(--muted); background: var(--surface-muted); }

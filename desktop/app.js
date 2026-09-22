@@ -1,5 +1,15 @@
 const $ = (id) => document.getElementById(id);
 const invoke = (command, args) => window.__TAURI__.core.invoke(command, args);
+// Read the installed version so About and Updates cannot drift from the build.
+async function showInstalledVersion() {
+  try {
+    const version = await window.__TAURI__?.app?.getVersion();
+    if (typeof version === "string" && version) {
+      document.querySelectorAll("[data-app-version]").forEach((label) => { label.textContent = `v${version}`; });
+    }
+  } catch { /* Leave the version unavailable without interrupting gateway setup. */ }
+}
+void showInstalledVersion();
 let state = { running: false, dashboardUrl: null, settings: { workspaceRoot: "", port: 3081 } };
 let busy = false;
 let refreshPending = false;

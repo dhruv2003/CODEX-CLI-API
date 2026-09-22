@@ -13,6 +13,7 @@ import { writeStream } from './streaming.js'
 import { RequestLifecycle } from './lifecycle.js'
 import { CodexLoginManager } from './login.js'
 import { isInsideWorkspace, resolveWorkspacePath } from './security.js'
+import { normalizeAllowedOrigins, normalizeOrigin } from './origins.js'
 
 interface Dependencies {
   config: AppConfig
@@ -49,7 +50,8 @@ export function createApp(overrides: Partial<Dependencies> = {}) {
     const expectedToken = Buffer.from(config.desktopAdminToken)
     app.use((request, response, next) => {
       const localOrigin = `http://127.0.0.1:${request.socket.localPort}`
-      if (request.get('host') !== `127.0.0.1:${request.socket.localPort}` || (request.get('origin') && request.get('origin') !== localOrigin)) {
+      const isApi = /^\/v1(?:\/|$)/i.test(request.path)
+      if (request.get('host') !== `127.0.0.1:${request.socket.localPort}` || (!isApi && request.get('origin') && request.get('origin') !== localOrigin)) {
         response.status(403).json({ error: { message: 'desktop origin denied' } })
         return
       }
@@ -105,6 +107,9 @@ export function createApp(overrides: Partial<Dependencies> = {}) {
     }
     next()
   })
+  // Preflight carries no bearer token. Every actual API request still authenticates
+  // and checks that key's origin policy before parsing bodies or creating sessions.
+  app.use('/v1', apiPreflight, authenticate(keys))
   app.use(express.json({ limit: '1mb' }))
   app.post('/admin/prepare-update', localAdmin, (_request, response) => {
     const capacity = admission.stats()
@@ -285,7 +290,6 @@ export function createApp(overrides: Partial<Dependencies> = {}) {
   }))
   app.get('/', (_request, response) => { response.sendFile(resolve(publicDirectory, 'index.html')) })
   app.use('/admin', express.static(publicDirectory))
-  app.use('/v1', authenticate(keys))
 
   app.get('/v1/models', (_request, response) => {
     response.json({
@@ -727,6 +731,9 @@ async function admit(response: Response, identity: ApiKeyIdentity, admission: Ad
 }
 
 function validateKeyPolicy(body: Record<string, unknown>): { message: string; param: string } | undefined {
+  try { normalizeAllowedOrigins(body.allowedOrigins) } catch (error) {
+    return { message: (error as Error).message, param: 'allowedOrigins' }
+  }
   if (body.expiresAt !== undefined && body.expiresAt !== null
     && (typeof body.expiresAt !== 'string' || !Number.isFinite(Date.parse(body.expiresAt)) || new Date(body.expiresAt).toISOString() !== body.expiresAt)) {
     return { message: 'expiresAt must be a canonical ISO timestamp or null', param: 'expiresAt' }
@@ -742,13 +749,15 @@ function keyPolicy(body: Record<string, unknown>): ApiKeyPolicy {
   return {
     ...(body.expiresAt === null || typeof body.expiresAt === 'string' ? { expiresAt: body.expiresAt } : {}),
     ...(typeof body.requestsPerMinute === 'number' ? { requestsPerMinute: body.requestsPerMinute } : {}),
+    ...(body.allowedOrigins !== undefined ? { allowedOrigins: normalizeAllowedOrigins(body.allowedOrigins) } : {}),
   }
 }
 
 function localAdmin(request: Request, response: Response, next: NextFunction): void {
   const address = request.socket.remoteAddress
   const isLoopback = address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1'
-  if (!isLoopback || request.get('x-codex-admin') !== 'local') {
+  const origin = request.get('origin')
+  if (!isLoopback || request.get('x-codex-admin') !== 'local' || (origin !== undefined && !isSameOrigin(request, origin))) {
     sendError(response, 403, 'local admin access required', null, 'admin_access_required', 'authentication_error')
     return
   }
@@ -757,13 +766,49 @@ function localAdmin(request: Request, response: Response, next: NextFunction): v
 
 function authenticate(keys: ApiKeyStore) {
   return asyncHandler(async (request, response, next) => {
+    response.vary('Origin')
     const header = request.get('authorization')
     const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : ''
     const identity = await keys.identify(token)
     if (identity === undefined) return sendError(response, 401, 'invalid API key', null, 'invalid_api_key', 'authentication_error')
+    const origin = request.get('origin')
+    if (origin !== undefined) {
+      const normalized = normalizeOrigin(origin)
+      if (normalized === undefined || (!isSameOrigin(request, origin) && !identity.allowedOrigins.includes(normalized))) {
+        return sendError(response, 403, 'origin is not allowed for this API key', null, 'origin_not_allowed', 'authentication_error')
+      }
+      response.set('Access-Control-Allow-Origin', origin)
+      response.set('Access-Control-Expose-Headers', 'x-request-id, retry-after')
+    }
     response.locals.apiKeyIdentity = identity
     next()
   })
+}
+
+function isSameOrigin(request: Request, origin: string): boolean {
+  const normalized = normalizeOrigin(origin)
+  return normalized !== undefined && normalized === normalizeOrigin(`${request.protocol}://${request.get('host')}`)
+}
+
+function apiPreflight(request: Request, response: Response, next: NextFunction): void {
+  response.vary('Origin')
+  if (request.method !== 'OPTIONS' || request.get('origin') === undefined) return next()
+  response.vary('Access-Control-Request-Method')
+  response.vary('Access-Control-Request-Headers')
+  const origin = request.get('origin')!
+  const method = request.get('access-control-request-method')
+  const headers = request.get('access-control-request-headers') ?? ''
+  const allowedHeaders = ['authorization', 'content-type', 'accept', 'x-request-id']
+  const requestedHeaders = headers ? headers.split(',').map(header => header.trim().toLowerCase()) : []
+  if (normalizeOrigin(origin) === undefined || !['GET', 'HEAD', 'POST'].includes(method ?? '')
+    || headers.length > 1024 || requestedHeaders.some(header => !allowedHeaders.includes(header))) {
+    sendError(response, 403, 'CORS preflight is not allowed', null, 'origin_not_allowed', 'authentication_error')
+    return
+  }
+  response.set('Access-Control-Allow-Origin', origin)
+  response.set('Access-Control-Allow-Methods', 'GET, HEAD, POST')
+  response.set('Access-Control-Allow-Headers', allowedHeaders.join(', '))
+  response.status(204).end()
 }
 
 function apiKeyIdentity(response: Response): ApiKeyIdentity {

@@ -8,7 +8,7 @@ The desktop build reuses the web dashboard and TypeScript gateway. Rust handles 
 2. Choose an existing workspace folder. The app rejects folders that overlap its private application-data directory.
 3. Click **Save & start gateway**. Create a project-scoped API key in the embedded dashboard.
 4. Click **Login to Codex**, copy the displayed device code, and open the sign-in page. Sign in with your own eligible account; the app does not include the developer's account.
-5. Run the dashboard connection test, then copy its VS Code configuration. The default API base is `http://127.0.0.1:3081/v1`; the chat-completions URL adds `/chat/completions`.
+5. Run the dashboard connection test, then use the key in your personal app. For a browser frontend, add its origin (for example `http://127.0.0.1:5500`) in the key's **Browser origins** field during creation or under **Edit policy**. **Connect** provides a JavaScript example and the existing VS Code configuration. The default API base is `http://127.0.0.1:3081/v1`; the chat-completions URL adds `/chat/completions`.
 
 VS Code on the same computer needs no tunnel. Changing the app's port requires updating the client endpoint. Stopping/restarting the gateway interrupts active requests. Closing/quitting the app stops the gateway; it is not an always-on background service.
 
@@ -19,7 +19,7 @@ The Settings button edits workspace and port. Once keys exist, their workspace i
 Tauri's platform app-data directory for `com.codexcliapi.desktop` contains:
 
 - `settings.json`: workspace folder and port only.
-- `api-keys.json`: hashed API keys and metadata, never the recoverable API secret.
+- `api-keys.json`: hashed API keys and metadata, including each key's browser origins, never the recoverable API secret.
 - `codex-users/`: isolated per-key Codex authentication/session state. Treat this directory as sensitive.
 
 Typical locations are `~/Library/Application Support/com.codexcliapi.desktop` on macOS, `%APPDATA%\com.codexcliapi.desktop` on Windows, and `$XDG_DATA_HOME/com.codexcliapi.desktop` (usually `~/.local/share/...`) on Linux. The actual path is displayed under Advanced settings. Unix private directories use mode 700 and key files mode 600; Windows uses the current user's application-data location and inherited ACLs.
@@ -84,7 +84,7 @@ Select the old project folder containing its `.env`. On startup, migration reads
 
 A durable completed-import record ensures deleting an imported key does not restore it from the old installation on restart. Interrupted imports fail closed with a recovery message; do not delete import markers to retry unless you have reviewed the saved keys and credential directories.
 
-The gateway listens only on loopback. API requests require issued API keys. Desktop administration additionally requires a random per-launch capability token, never placed in query strings or logs. The embedded dashboard carries this token in its URL fragment and request headers; Codex subprocesses do not inherit it. Foreign Host/Origin values are rejected.
+The gateway listens only on loopback. API requests require issued API keys. Desktop administration additionally requires a random per-launch capability token, never placed in query strings or logs. The embedded dashboard carries this token in its URL fragment and request headers; Codex subprocesses do not inherit it. Foreign Host values remain rejected. Cross-origin browser API requests require an origin allowed by the authenticated key; administration routes continue to reject foreign origins. Empty browser-origin policies preserve same-origin and server/CLI clients.
 
 Only the bundled launcher has native IPC permissions. The dashboard iframe cannot launch arbitrary programs. Its one message bridge opens a fixed Codex device-login URL after checking the sender window and origin. Runtime process cleanup is owned by the native shell, including a process-tree fallback.
 

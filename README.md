@@ -119,6 +119,34 @@ curl.exe -N http://127.0.0.1:3081/v1/chat/completions -H "Authorization: Bearer 
 `/readyz` checks the workspace, state root, and key-file parent. Repair it
 before troubleshooting any client.
 
+## Personal browser apps: allowed origins
+
+Create a key for your project, sign in to Codex, and test its connection. In
+**Create API key** (including guided setup) or **API Keys → Edit policy**, add
+your frontend's address under **Browser origins**, for example
+`http://127.0.0.1:5500`. Save the policy, then use the key with the API endpoint
+`http://127.0.0.1:3081/v1` and a model returned by `/v1/models`. **Connect**
+includes a JavaScript example for your own app.
+
+Enter one origin per line or separate them with commas. Origins include the
+scheme, hostname, and port, but no page path: enter `http://127.0.0.1:5500`,
+not `http://127.0.0.1:5500/index.html`. `localhost` and `127.0.0.1` are different
+origins; add each one you use. Wildcards are not supported. The list belongs to
+each key and is saved with its policy, so desktop users do not need a `.env`
+setting. Existing keys default to an empty list, which disables cross-origin
+browser access while retaining same-origin and server/CLI access.
+
+Browser preflight requests do not contain the API key. The gateway handles
+preflight for supported API methods and headers, then authenticates the actual
+request and checks its origin against that specific key before running it.
+Browser permissions never grant access to the desktop administration routes.
+CORS is a browser control, not a substitute for the secret API key.
+
+For a personal local demo, accept the key through a password field and keep it
+in page memory. Do not serve `.env`, embed a shared secret in frontend code, or
+commit it. For an app shared with other people, keep your secret in your backend.
+The loopback endpoint connects to the gateway on the same computer as the client.
+
 ## VS Code: direct localhost integration
 
 If VS Code is on the same computer as the gateway, use:

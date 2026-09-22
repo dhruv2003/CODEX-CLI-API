@@ -2,6 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { mkdir, readFile, rename, rm, rmdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
+import { normalizeAllowedOrigins } from './origins.js'
 
 interface StoredKey {
   id: string
@@ -17,6 +18,7 @@ interface StoredKey {
   failureCount?: number
   lastUsedAt?: string | null
   workspaceRoot?: string
+  allowedOrigins?: string[]
 }
 
 export interface CreatedApiKey {
@@ -25,6 +27,7 @@ export interface CreatedApiKey {
   key: string
   createdAt: string
   active: boolean
+  allowedOrigins: string[]
   workspaceRoot?: string
 }
 
@@ -32,6 +35,7 @@ export interface ApiKeyIdentity {
   id: string
   name: string
   requestsPerMinute: number
+  allowedOrigins: string[]
   workspaceRoot?: string
 }
 
@@ -50,6 +54,7 @@ export interface ApiKeyMetadata extends ApiKeyIdentity {
 export interface ApiKeyPolicy {
   expiresAt?: string | null
   requestsPerMinute?: number
+  allowedOrigins?: string[]
 }
 
 export interface ApiKeyCreateOptions extends ApiKeyPolicy {
@@ -82,11 +87,11 @@ export class ApiKeyStore {
   }
 
   async create(name: string, policy: ApiKeyCreateOptions = {}): Promise<CreatedApiKey> {
-    const { expiresAt, requestsPerMinute } = validatePolicy(policy)
+    const { expiresAt, requestsPerMinute, allowedOrigins } = validatePolicy(policy)
     if (policy.workspaceRoot !== undefined && !validWorkspaceRoot(policy.workspaceRoot)) throw new TypeError('workspaceRoot must be a non-empty relative path')
     const workspaceRoot = validWorkspaceRoot(policy.workspaceRoot) ? policy.workspaceRoot : undefined
     const key = `dsh_live_${randomBytes(32).toString('base64url')}`
-    const created: CreatedApiKey = { id: `key_${randomBytes(8).toString('hex')}`, name, key, createdAt: new Date().toISOString(), active: true, ...(workspaceRoot ? { workspaceRoot } : {}) }
+    const created: CreatedApiKey = { id: `key_${randomBytes(8).toString('hex')}`, name, key, createdAt: new Date().toISOString(), active: true, allowedOrigins, ...(workspaceRoot ? { workspaceRoot } : {}) }
     const stored: StoredKey = {
       id: created.id,
       name,
@@ -95,6 +100,7 @@ export class ApiKeyStore {
       active: created.active,
       expiresAt,
       requestsPerMinute,
+      allowedOrigins,
       requestCount: 0,
       inputTokens: 0,
       outputTokens: 0,
@@ -127,6 +133,7 @@ export class ApiKeyStore {
       if (update.active !== undefined) stored.active = update.active
       if (update.expiresAt !== undefined) stored.expiresAt = update.expiresAt
       if (update.requestsPerMinute !== undefined) stored.requestsPerMinute = update.requestsPerMinute
+      if (update.allowedOrigins !== undefined) stored.allowedOrigins = normalizeAllowedOrigins(update.allowedOrigins)
       updated = toMetadata(stored)
     }, () => updated !== undefined)
     return updated
@@ -170,9 +177,11 @@ export class ApiKeyStore {
     const actual = Buffer.from(hashKey(key), 'hex')
     for (const stored of await this.read()) {
       if (stored.workspaceRoot !== undefined && !validWorkspaceRoot(stored.workspaceRoot)) continue
+      let allowedOrigins: string[]
+      try { allowedOrigins = normalizeAllowedOrigins(stored.allowedOrigins) } catch { continue }
       const expected = Buffer.from(stored.hash, 'hex')
       if (stored.active !== false && !isExpired(stored.expiresAt) && expected.length === actual.length && timingSafeEqual(expected, actual)) {
-        return { id: stored.id, name: stored.name, requestsPerMinute: toMetadata(stored).requestsPerMinute, ...(validWorkspaceRoot(stored.workspaceRoot) ? { workspaceRoot: stored.workspaceRoot } : {}) }
+        return { id: stored.id, name: stored.name, requestsPerMinute: toMetadata(stored).requestsPerMinute, allowedOrigins, ...(validWorkspaceRoot(stored.workspaceRoot) ? { workspaceRoot: stored.workspaceRoot } : {}) }
       }
     }
     return undefined
@@ -239,6 +248,8 @@ export class ApiKeyStore {
 }
 
 function toMetadata(key: StoredKey): ApiKeyMetadata {
+  let allowedOrigins: string[] = []
+  try { allowedOrigins = normalizeAllowedOrigins(key.allowedOrigins) } catch { /* Invalid stored policy denies authentication; keep admin metadata readable for repair. */ }
   return {
     id: key.id,
     name: key.name,
@@ -246,6 +257,7 @@ function toMetadata(key: StoredKey): ApiKeyMetadata {
     active: key.active !== false,
     expiresAt: validExpiresAt(key.expiresAt) ? key.expiresAt : null,
     requestsPerMinute: positiveInteger(key.requestsPerMinute) ? key.requestsPerMinute : DEFAULT_REQUESTS_PER_MINUTE,
+    allowedOrigins,
     requestCount: nonNegativeInteger(key.requestCount) ? key.requestCount : 0,
     inputTokens: nonNegativeInteger(key.inputTokens) ? key.inputTokens : 0,
     outputTokens: nonNegativeInteger(key.outputTokens) ? key.outputTokens : 0,
@@ -255,10 +267,10 @@ function toMetadata(key: StoredKey): ApiKeyMetadata {
   }
 }
 
-function validatePolicy(policy: ApiKeyPolicy): { expiresAt: string | null; requestsPerMinute: number } {
+function validatePolicy(policy: ApiKeyPolicy): { expiresAt: string | null; requestsPerMinute: number; allowedOrigins: string[] } {
   if (policy.expiresAt !== undefined && !validExpiresAt(policy.expiresAt)) throw new TypeError('expiresAt must be an ISO timestamp or null')
   if (policy.requestsPerMinute !== undefined && !positiveInteger(policy.requestsPerMinute)) throw new RangeError('requestsPerMinute must be a positive integer')
-  return { expiresAt: policy.expiresAt ?? null, requestsPerMinute: policy.requestsPerMinute ?? DEFAULT_REQUESTS_PER_MINUTE }
+  return { expiresAt: policy.expiresAt ?? null, requestsPerMinute: policy.requestsPerMinute ?? DEFAULT_REQUESTS_PER_MINUTE, allowedOrigins: normalizeAllowedOrigins(policy.allowedOrigins) }
 }
 
 function validateUpdate(update: ApiKeyUpdate): void {

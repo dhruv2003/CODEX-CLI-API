@@ -13,12 +13,12 @@ describe('ApiKeyStore', () => {
 
     expect(created.key).toMatch(/^dsh_live_[A-Za-z0-9_-]+$/)
     expect(await store.verify(created.key)).toBe(true)
-    expect(await store.identify(created.key)).toEqual({ id: created.id, name: 'test key', requestsPerMinute: 60 })
+    expect(await store.identify(created.key)).toEqual({ id: created.id, name: 'test key', requestsPerMinute: 60, allowedOrigins: [] })
     expect(await store.verify(`${created.key}x`)).toBe(false)
     const persisted = await readFile(join(directory, 'keys.json'), 'utf8')
     expect(persisted).not.toContain(created.key)
     expect(JSON.parse(persisted)).toMatchObject([{ active: true, expiresAt: null, requestsPerMinute: 60, requestCount: 0, inputTokens: 0, outputTokens: 0, failureCount: 0, lastUsedAt: null }])
-    expect(await store.list()).toEqual([{ id: created.id, name: 'test key', createdAt: expect.any(String), active: true, expiresAt: null, requestsPerMinute: 60, requestCount: 0, inputTokens: 0, outputTokens: 0, failureCount: 0, lastUsedAt: null }])
+    expect(await store.list()).toEqual([{ id: created.id, name: 'test key', createdAt: expect.any(String), active: true, expiresAt: null, requestsPerMinute: 60, allowedOrigins: [], requestCount: 0, inputTokens: 0, outputTokens: 0, failureCount: 0, lastUsedAt: null }])
   })
 
   it('binds a key to its workspace root', async () => {
@@ -87,7 +87,7 @@ describe('ApiKeyStore', () => {
     delete keys[0].active
     await writeFile(keyFile, `${JSON.stringify(keys)}\n`)
 
-    expect(await store.list()).toEqual([{ id: created.id, name: 'test key', createdAt: expect.any(String), active: true, expiresAt: null, requestsPerMinute: 60, requestCount: 0, inputTokens: 0, outputTokens: 0, failureCount: 0, lastUsedAt: null }])
+    expect(await store.list()).toEqual([{ id: created.id, name: 'test key', createdAt: expect.any(String), active: true, expiresAt: null, requestsPerMinute: 60, allowedOrigins: [], requestCount: 0, inputTokens: 0, outputTokens: 0, failureCount: 0, lastUsedAt: null }])
     expect(await store.verify(created.key)).toBe(true)
   })
 
@@ -116,6 +116,7 @@ describe('ApiKeyStore', () => {
     delete keys[0].active
     delete keys[0].expiresAt
     delete keys[0].requestsPerMinute
+    delete keys[0].allowedOrigins
     delete keys[0].requestCount
     delete keys[0].inputTokens
     delete keys[0].outputTokens
@@ -123,7 +124,7 @@ describe('ApiKeyStore', () => {
     delete keys[0].lastUsedAt
     await writeFile(keyFile, `${JSON.stringify(keys)}\n`)
 
-    expect(await store.list()).toEqual([{ id: created.id, name: 'test key', createdAt: expect.any(String), active: true, expiresAt: null, requestsPerMinute: 60, requestCount: 0, inputTokens: 0, outputTokens: 0, failureCount: 0, lastUsedAt: null }])
+    expect(await store.list()).toEqual([{ id: created.id, name: 'test key', createdAt: expect.any(String), active: true, expiresAt: null, requestsPerMinute: 60, allowedOrigins: [], requestCount: 0, inputTokens: 0, outputTokens: 0, failureCount: 0, lastUsedAt: null }])
   })
 
   it('rejects expired keys while preserving the dsh_live key format', async () => {
@@ -143,7 +144,7 @@ describe('ApiKeyStore', () => {
 
     const updated = await store.update(created.id, { active: false, expiresAt: '2030-01-01T00:00:00.000Z', requestsPerMinute: 30 })
 
-    expect(updated).toEqual({ id: created.id, name: 'editable key', createdAt: expect.any(String), active: false, expiresAt: '2030-01-01T00:00:00.000Z', requestsPerMinute: 30, requestCount: 0, inputTokens: 0, outputTokens: 0, failureCount: 0, lastUsedAt: null })
+    expect(updated).toEqual({ id: created.id, name: 'editable key', createdAt: expect.any(String), active: false, expiresAt: '2030-01-01T00:00:00.000Z', requestsPerMinute: 30, allowedOrigins: [], requestCount: 0, inputTokens: 0, outputTokens: 0, failureCount: 0, lastUsedAt: null })
     expect(updated).not.toHaveProperty('hash')
     expect(updated).not.toHaveProperty('key')
   })

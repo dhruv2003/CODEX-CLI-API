@@ -48,6 +48,17 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
+test('settings and About show the installed app version', async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as any).__TAURI__.app = { getVersion: async () => '9.8.7' }
+  })
+  await page.goto('http://desktop.test')
+  await page.getByRole('button', { name: 'Settings', exact: true }).click()
+  await expect(page.locator('.settings-heading .version')).toHaveText('v9.8.7')
+  await expect(page.locator('.about')).toContainText('Codex CLI API · v9.8.7')
+  await expect(page.getByText('Current version', { exact: false })).toHaveText('Current version v9.8.7')
+})
+
 test('desktop first run saves native settings and starts, restarts and stops gateway', async ({ page }) => {
   await page.goto('http://desktop.test')
   await expect(page.locator('#status')).toHaveText('Gateway stopped')

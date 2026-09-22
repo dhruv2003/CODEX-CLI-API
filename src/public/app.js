@@ -49,6 +49,7 @@ const psQuote = (value) => "'" + String(value).replaceAll("'", "''") + "'";
 const elements = {
   form: document.querySelector("#create-form"), name: document.querySelector("#key-name"),
   workspaceRoot: document.querySelector("#key-workspace-root"),
+  allowedOrigins: document.querySelector("#key-origins"),
   requestsPerMinute: document.querySelector("#key-rpm"), expiresAt: document.querySelector("#key-expiry"),
   keys: document.querySelector("#keys"), status: document.querySelector("#status"), overview: document.querySelector(".overview"),
   secretPanel: document.querySelector("#secret-panel"), secret: document.querySelector("#new-secret"), refresh: document.querySelector("#refresh"),
@@ -351,6 +352,8 @@ async function requestJson(url, options = {}) {
 
 function api(path = "", options = {}) { return requestJson(`${endpoint}${path}`, options); }
 
+function parseOrigins(value) { return value.split(/[\n,]/).map(origin => origin.trim()).filter(Boolean); }
+
 async function loadConfig() {
   setupConfigError = "";
   renderSetup();
@@ -394,7 +397,7 @@ function renderSetup() {
   renderKeyDetail(key);
   renderWizard();
   if (!adminConfig) {
-    ["setup-workspace-root", "key-create-example", "base-url", "login-example", "vscode-example", "curl-example", "tunnel-example"].forEach((id) => { $(id).textContent = setupConfigError ? "Unavailable: " + setupConfigError : "Loading server configuration…"; });
+    ["setup-workspace-root", "key-create-example", "base-url", "login-example", "vscode-example", "curl-example", "browser-example", "tunnel-example"].forEach((id) => { $(id).textContent = setupConfigError ? "Unavailable: " + setupConfigError : "Loading server configuration…"; });
     return;
   }
   const windows = $("setup-platform").value === "windows";
@@ -415,6 +418,19 @@ function renderSetup() {
     : "export CODEX_HOME=" + quote(home) + '\nmkdir -p "$CODEX_HOME"\ncodex login';
   $("vscode-example").textContent = JSON.stringify([{name:"Local Codex CLI API", vendor:"customendpoint", apiKey:secret, apiType:"chat-completions", models:[{id:modelId,name:modelId,url:baseUrl+"/chat/completions",toolCalling:false,vision:false,thinking:true,supportsReasoningEffort:setupData.models.find((entry) => entry.id === model)?.efforts || [],reasoningEffortFormat:"chat-completions"}]}], null, 2);
   const payload = JSON.stringify({model:modelId,messages:[{role:"user",content:"Say hello"}],stream:false,...(effort ? {reasoning_effort:effort} : {})});
+  $("browser-origins-status").textContent = key?.allowedOrigins?.length
+    ? "Allowed browser origins: " + key.allowedOrigins.join(", ")
+    : "Cross-origin browser access disabled. Add your app’s origin under API keys → Edit policy.";
+  $("browser-example").textContent = [
+    "const response = await fetch(" + JSON.stringify(baseUrl + "/chat/completions") + ", {",
+    '  method: "POST",',
+    '  headers: { "Content-Type": "application/json", Authorization: ' + JSON.stringify("Bearer " + secret) + " },",
+    "  body: JSON.stringify(" + payload + ")",
+    "});",
+    "const data = await response.json();",
+    'if (!response.ok) throw new Error(data.error?.message || `Request failed (${response.status})`);',
+    "console.log(data.choices[0].message.content);",
+  ].join("\n");
   $("curl-example").textContent = windows
     ? "Invoke-RestMethod -Method Post -Uri " + quote(baseUrl+"/chat/completions") + " -Headers @{ Authorization = " + quote("Bearer "+secret) + " } -ContentType 'application/json' -Body " + quote(payload)
     : "curl " + quote(baseUrl+"/chat/completions") + " -H " + quote("Authorization: Bearer "+secret) + " -H 'Content-Type: application/json' -d " + quote(payload);
@@ -914,6 +930,7 @@ function renderKeys(keys) {
     appendMeta(details, `Workspace: ${key.workspaceRoot || adminConfig?.workspaceRoot || "—"}`);
     appendMeta(details, `RPM ${key.requestsPerMinute || 60} · ${key.requestCount || 0} requests · ${key.failureCount || 0} failures · ${Number(key.inputTokens || 0) + Number(key.outputTokens || 0)} tokens`);
     appendMeta(details, `Last used ${formatDate(key.lastUsedAt)} · Expires ${key.expiresAt ? formatDate(key.expiresAt) : "Never"}`);
+    appendMeta(details, key.allowedOrigins?.length ? `Browser origins: ${key.allowedOrigins.join(", ")}` : "Cross-origin browser access disabled");
     appendMeta(details, progressText(key));
     const account = healthData?.keys?.find(entry => entry.id === key.id)?.account;
     appendMeta(details, account?.email ? `Account hint (unverified): ${account.email}` : 'Codex account: identity unavailable; use sign-in to select your account.');
@@ -951,14 +968,21 @@ function renderKeys(keys) {
     const rpmField = policyField("Requests / minute", `rpm-${key.id}`, rpm); rpmField.classList.add("compact-field");
     const expiry = document.createElement("input"); expiry.type = "datetime-local"; expiry.value = localDateTimeValue(key.expiresAt);
     const expiryField = policyField("Expiry (optional)", `expiry-${key.id}`, expiry);
+    const origins = document.createElement("textarea"); origins.rows = 3; origins.value = (key.allowedOrigins || []).join("\n");
+    origins.placeholder = "http://127.0.0.1:5500\nhttp://localhost:3000";
+    const originsField = policyField("Browser origins (optional)", `origins-${key.id}`, origins); originsField.classList.add("origins-field");
+    const originsHelp = document.createElement("p"); originsHelp.className = "muted"; originsHelp.id = `origins-help-${key.id}`;
+    originsHelp.textContent = "One exact http:// or https:// origin per line or comma, with no path. Blank keeps cross-origin browser access disabled. Server and CLI clients are unaffected.";
+    origins.setAttribute("aria-describedby", originsHelp.id + " policy-error-" + key.id); originsField.append(originsHelp);
+    const policyError = document.createElement("p"); policyError.className = "error-state policy-error"; policyError.id = `policy-error-${key.id}`; policyError.setAttribute("role", "alert"); policyError.hidden = true;
     const save = document.createElement("button"); save.type = "submit"; save.textContent = "Save policy"; save.setAttribute("aria-label", `Save policy for API key ${key.name || key.id}`);
     const clear = document.createElement("button"); clear.className = "secondary"; clear.type = "button"; clear.textContent = "Clear expiry"; clear.setAttribute("aria-label", `Clear expiry for API key ${key.name || key.id}`); clear.disabled = !key.expiresAt;
-    clear.addEventListener("click", () => updateKeyPolicy(key.id, { expiresAt: null }, clear));
+    clear.addEventListener("click", () => updateKeyPolicy(key.id, { expiresAt: null }, clear, policyError));
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      if (form.reportValidity()) updateKeyPolicy(key.id, { requestsPerMinute: Number(rpm.value), expiresAt: canonicalExpiry(expiry.value) }, save);
+      if (form.reportValidity()) updateKeyPolicy(key.id, { requestsPerMinute: Number(rpm.value), expiresAt: canonicalExpiry(expiry.value), allowedOrigins: parseOrigins(origins.value) }, save, policyError);
     });
-    form.append(rpmField, expiryField, save, clear); policy.append(summary, form);
+    form.append(rpmField, expiryField, originsField, policyError, save, clear); policy.append(summary, form);
     card.append(details, actions, policy); fragment.append(card);
   });
   elements.keys.replaceChildren(fragment);
@@ -1008,11 +1032,15 @@ async function setKeyState(id, active, button) {
   catch (error) { setStatus(error.message, true); button.disabled = false; }
 }
 
-async function updateKeyPolicy(id, policy, button) {
+async function updateKeyPolicy(id, policy, button, errorElement) {
   if (!id) return;
+  if (errorElement) errorElement.hidden = true;
   button.disabled = true;
   try { await api(`/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(policy) }); await refreshDashboard(); }
-  catch (error) { setStatus(error.message, true); button.disabled = false; }
+  catch (error) {
+    setStatus(error.message, true); button.disabled = false;
+    if (errorElement) { errorElement.textContent = error.message; errorElement.hidden = false; }
+  }
 }
 
 function confirmKeyDeletion(label) {
@@ -1054,15 +1082,23 @@ elements.form.addEventListener("submit", async (event) => {
   if (!elements.form.reportValidity()) return;
   const name = elements.name.value.trim(); if (!name) return;
   $("workspace-error").hidden = true;
+  $("origins-error").hidden = true;
+  $("create-error").hidden = true;
   const button = elements.form.querySelector("button[type=submit]"); button.disabled = true;
   try {
-    const key = await api("", { method: "POST", body: JSON.stringify({ name, workspaceRoot: elements.workspaceRoot.value.trim(), requestsPerMinute: Number(elements.requestsPerMinute.value), expiresAt: canonicalExpiry(elements.expiresAt.value) }) });
+    const key = await api("", { method: "POST", body: JSON.stringify({ name, workspaceRoot: elements.workspaceRoot.value.trim(), requestsPerMinute: Number(elements.requestsPerMinute.value), expiresAt: canonicalExpiry(elements.expiresAt.value), allowedOrigins: parseOrigins(elements.allowedOrigins.value) }) });
     elements.secret.textContent = key.key || ""; elements.secretPanel.hidden = !key.key;
     clearLogin(); setupKey = key.key; setupKeyId = key.id; secrets.set(key.id, key.key); $("setup-secret").value = key.key; renderSetup(); elements.name.value = ""; elements.requestsPerMinute.value = "60"; elements.expiresAt.value = "";
     if ($("key-expiry-mode")) $("key-expiry-mode").value = "never";
+    elements.allowedOrigins.value = "";
     renderExpiryMode(); persistPreferences();
     setStatus("Key created. Copy the secret now."); await refreshDashboard();
-  } catch (error) { setStatus(error.message, true); $("workspace-error").textContent = error.message + (adminConfig ? " Choose an existing project directory inside " + adminConfig.workspaceRoot + "." : ""); $("workspace-error").hidden = false; } finally { button.disabled = false; }
+  } catch (error) {
+    setStatus(error.message, true);
+    const errorElement = /origin/i.test(error.message) ? $("origins-error") : /workspace|directory|folder/i.test(error.message) ? $("workspace-error") : $("create-error");
+    errorElement.textContent = error.message;
+    errorElement.hidden = false;
+  } finally { button.disabled = false; }
 });
 
 document.querySelectorAll("[data-copy]").forEach((button) => button.addEventListener("click", () => copyText(button.dataset.copy, button)));
