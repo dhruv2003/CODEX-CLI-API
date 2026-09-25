@@ -10,6 +10,15 @@ describe('configuration', () => {
     expect(loadConfig({}).models).not.toContain('gpt-5.4')
   })
 
+  it('includes GPT-6 Sol and Luna in the default selectable model catalog', () => {
+    const config = loadConfig({})
+
+    expect(config.models).toEqual(expect.arrayContaining(['gpt-6-sol', 'gpt-6-luna']))
+    expect(config.imageModels).toEqual(expect.arrayContaining(['gpt-6-sol', 'gpt-6-luna']))
+    expect(config.modelEfforts['gpt-6-sol']).toEqual(['low', 'medium', 'high', 'xhigh', 'max', 'ultra'])
+    expect(config.modelEfforts['gpt-6-luna']).toEqual(['low', 'medium', 'high', 'xhigh', 'max'])
+  })
+
   it('gives custom enabled models the default reasoning efforts', () => {
     const config = loadConfig({ CODEX_MODELS: 'custom-model' })
 
@@ -17,12 +26,14 @@ describe('configuration', () => {
   })
 
   it('enables ultra reasoning for models that support it', () => {
-    const config = loadConfig({ CODEX_MODELS: 'gpt-6-astra,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna' })
+    const config = loadConfig({ CODEX_MODELS: 'gpt-6-astra,gpt-6-sol,gpt-6-luna,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna' })
 
     expect(config.modelEfforts['gpt-6-astra']).toContain('ultra')
+    expect(config.modelEfforts['gpt-6-sol']).toContain('ultra')
     expect(config.modelEfforts['gpt-5.6-sol']).toContain('ultra')
     expect(config.modelEfforts['gpt-5.6-terra']).toContain('ultra')
     expect(config.modelEfforts['gpt-5.6-luna']).not.toContain('ultra')
+    expect(config.modelEfforts['gpt-6-luna']).not.toContain('ultra')
   })
 
   it('keeps Codex credentials outside the default callable workspace', () => {

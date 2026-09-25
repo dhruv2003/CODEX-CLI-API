@@ -2,7 +2,7 @@ import { mkdir, realpath } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 import { isInsideWorkspace } from './security.js'
 
-const defaultModels = ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.4-mini']
+const defaultModels = ['gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.4-mini']
 const defaultImageModels = [...defaultModels]
 const defaultEfforts = ['low', 'medium', 'high', 'xhigh', 'max']
 
@@ -37,8 +37,9 @@ function numberEnv(value: string | undefined, fallback: number): number {
 
 function modelEfforts(value: string | undefined, models: string[]): Record<string, string[]> {
   if (value === undefined) return Object.fromEntries(models.map(model => [model,
-    model === 'gpt-6-astra' || model === 'gpt-5.6-sol' || model === 'gpt-5.6-terra' ? [...defaultEfforts, 'ultra']
-      : model === 'gpt-5.6-luna' ? defaultEfforts : defaultEfforts.slice(0, 4),
+    model === 'gpt-6-astra' || model === 'gpt-6-sol' || model === 'gpt-5.6-sol' || model === 'gpt-5.6-terra' ? [...defaultEfforts, 'ultra']
+      : model === 'gpt-6-luna' || model === 'gpt-5.6-luna' ? defaultEfforts
+        : defaultEfforts.slice(0, 4),
   ]))
   try {
     const parsed: unknown = JSON.parse(value)

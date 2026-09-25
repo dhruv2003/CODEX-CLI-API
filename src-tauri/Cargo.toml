@@ -1,6 +1,6 @@
 [package]
 name = "sidecar-desktop"
-version = "1.4.3"
+version = "1.4.4"
 description = "Local Codex API desktop gateway"
 authors = ["Dhruv Bhagatkar"]
 homepage = "https://thisisdhruv.in"

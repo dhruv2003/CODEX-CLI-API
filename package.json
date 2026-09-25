@@ -1,6 +1,6 @@
 {
   "name": "sidecar",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,7 +22,7 @@
     "express": "^5.1.0"
   },
   "devDependencies": {
-    "@openai/codex": "^0.154.0",
+    "@openai/codex": "^0.155.1",
     "@playwright/test": "^1.63.0",
     "@tauri-apps/cli": "^2.11.4",
     "@types/express": "^5.0.3",

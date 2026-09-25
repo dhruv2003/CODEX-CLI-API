@@ -105,7 +105,7 @@ macOS / Linux:
 ```zsh
 export CODEX_API_KEY='dsh_live_REPLACE_ME'
 curl -sS http://127.0.0.1:3081/v1/models -H "Authorization: Bearer $CODEX_API_KEY"
-curl -N http://127.0.0.1:3081/v1/chat/completions -H "Authorization: Bearer $CODEX_API_KEY" -H 'Content-Type: application/json' -d '{"model":"gpt-5.6-sol","messages":[{"role":"user","content":"Explain this project."}],"stream":true,"reasoning_effort":"high"}'
+curl -N http://127.0.0.1:3081/v1/chat/completions -H "Authorization: Bearer $CODEX_API_KEY" -H 'Content-Type: application/json' -d '{"model":"gpt-6-sol","messages":[{"role":"user","content":"Explain this project."}],"stream":true,"reasoning_effort":"high"}'
 ```
 
 Windows PowerShell:
@@ -113,7 +113,7 @@ Windows PowerShell:
 ```powershell
 $env:CODEX_API_KEY = 'dsh_live_REPLACE_ME'
 curl.exe -sS http://127.0.0.1:3081/v1/models -H "Authorization: Bearer $env:CODEX_API_KEY"
-curl.exe -N http://127.0.0.1:3081/v1/chat/completions -H "Authorization: Bearer $env:CODEX_API_KEY" -H "Content-Type: application/json" -d '{"model":"gpt-5.6-sol","messages":[{"role":"user","content":"Explain this project."}],"stream":true,"reasoning_effort":"high"}'
+curl.exe -N http://127.0.0.1:3081/v1/chat/completions -H "Authorization: Bearer $env:CODEX_API_KEY" -H "Content-Type: application/json" -d '{"model":"gpt-6-sol","messages":[{"role":"user","content":"Explain this project."}],"stream":true,"reasoning_effort":"high"}'
 ```
 
 `/readyz` checks the workspace, state root, and key-file parent. Repair it
@@ -172,7 +172,7 @@ No tunnel, public hostname, or public HTTPS endpoint is needed. VS Code's
     "apiType": "chat-completions",
     "models": [
       {
-        "id": "gpt-5.6-sol",
+        "id": "gpt-6-sol",
         "name": "Codex Sol (local gateway)",
         "url": "http://127.0.0.1:3081/v1/chat/completions",
         "toolCalling": false,
@@ -192,8 +192,8 @@ visible.
 
 | Model IDs | Default reasoning levels |
 | --- | --- |
-| `gpt-6-astra`, `gpt-5.6-sol`, `gpt-5.6-terra` | `low`, `medium`, `high`, `xhigh`, `max`, `ultra` |
-| `gpt-5.6-luna` | `low` through `max` |
+| `gpt-6-astra`, `gpt-6-sol`, `gpt-5.6-sol`, `gpt-5.6-terra` | `low`, `medium`, `high`, `xhigh`, `max`, `ultra` |
+| `gpt-6-luna`, `gpt-5.6-luna` | `low` through `max` |
 | `gpt-5.5`, `gpt-5.4-mini` | `low` through `xhigh` |
 
 `CODEX_MODELS`, `CODEX_IMAGE_MODELS`, and `CODEX_MODEL_EFFORTS` override
